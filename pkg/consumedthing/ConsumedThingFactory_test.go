@@ -3,6 +3,7 @@ package consumedthing_test
 import (
 	"crypto/x509"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/wostzone/wost-go/pkg/accounts"
 	"github.com/wostzone/wost-go/pkg/consumedthing"
 	"github.com/wostzone/wost-go/pkg/testenv"
@@ -45,12 +46,20 @@ var testCACert *x509.Certificate
 //	os.Exit(result)
 //}
 
+// Create a test server for authentication, directory and mqtt broker
+// these services run on localhost
+func createTestServices(certs testenv.TestCerts) {
+	//testAuthService :=
+}
+
+// Create a test factory with auth and mqtt clients
+// Use createTestServices to fake a server
 func createTestFactory() *consumedthing.ConsumedThingFactory {
 	certs := testenv.CreateCertBundle()
 	testCACert = certs.CaCert
 
 	account := &accounts.AccountRecord{
-		Address:   "localhost",
+		Address:   testenv.ServerAddress,
 		LoginName: "user1",
 		MqttPort:  testenv.MqttPortUnpw,
 		AuthPort:  testAuthPort,
@@ -73,6 +82,17 @@ func TestConsumeDestroyThing(t *testing.T) {
 	td := createTestTD()
 	ct := factory.Consume(td)
 	factory.Destroy(ct)
+}
+
+func TestConnect(t *testing.T) {
+	logrus.Infof("--- TestConnect ---")
+
+	factory := createTestFactory()
+	td := createTestTD()
+	store := factory.GetThingStore()
+	store.AddTD(td)
+	err := factory.Connect("")
+	assert.Error(t, err)
 }
 
 //func TestReadProperty(t *testing.T) {

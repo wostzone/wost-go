@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+const testAppID = "wost-go"
+
 const testActionName = "action1"
 const testEventName = "event1"
 const testDeviceID = "device1"

@@ -5,6 +5,7 @@ package exposedthing
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/wostzone/wost-go/pkg/thing"
 	"sync"
@@ -146,11 +147,20 @@ func (eThing *ExposedThing) EmitEvent(name string, data interface{}) error {
 
 // EmitPropertyChange publishes a property value change event, which in turn will notify all
 // observers (subscribers) of the change.
+// TODO: validate property exists
 //
 // propName is the name of the property in the TD.
 // newRawValue is the new raw value of the property. This will be also be stored in the valueStore.
 // Returns an error if the property value cannot be published
 func (eThing *ExposedThing) EmitPropertyChange(propName string, newRawValue interface{}) error {
+	schema := eThing.TD.GetProperty(propName)
+	if schema == nil {
+		msg := fmt.Sprintf("Property '%s' does not exist on Thing '%s'", propName, eThing.TD.ID)
+		err := errors.New(msg)
+		logrus.Error(err)
+		return err
+	}
+
 	propMap := map[string]interface{}{propName: newRawValue}
 	return eThing.EmitPropertiesChange(propMap, false)
 }
@@ -167,7 +177,8 @@ func (eThing *ExposedThing) EmitPropertyChange(propName string, newRawValue inte
 // Returns an error if submitting an event fails
 func (eThing *ExposedThing) EmitPropertiesChange(
 	propMap map[string]interface{}, onlyChanges bool) error {
-	//logrus.Infof("EmitPropertyChanges: %s", propMap)
+
+	logrus.Infof("%s", propMap)
 	var err error
 	changedProps := make(map[string]interface{})
 

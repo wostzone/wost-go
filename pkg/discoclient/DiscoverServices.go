@@ -1,5 +1,5 @@
-// Package discovery with client for service discovery
-package discovery
+// Package discoclient with client for service discovery
+package discoclient
 
 import (
 	"fmt"

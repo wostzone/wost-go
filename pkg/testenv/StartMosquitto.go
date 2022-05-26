@@ -5,7 +5,6 @@ package testenv
 import (
 	"bytes"
 	"fmt"
-	"github.com/wostzone/wost-go/pkg/certsclient"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -93,18 +92,6 @@ func createMosquittoConf(configFolder string, certFolder string) string {
 	// return ""
 }
 
-// SaveCerts saves the given CA and mosquitto server key and certificates as PEM files
-func saveCerts(testCerts *TestCerts, certFolder string) {
-	certsclient.SaveX509CertToPEM(testCerts.CaCert, path.Join(certFolder, caCertFile))
-	certsclient.SaveKeysToPEM(testCerts.CaKey, path.Join(certFolder, caKeyFile))
-	certsclient.SaveTLSCertToPEM(testCerts.ServerCert,
-		path.Join(certFolder, serverCertFile),
-		path.Join(certFolder, serverKeyFile))
-	certsclient.SaveTLSCertToPEM(testCerts.PluginCert,
-		path.Join(certFolder, pluginCertFile),
-		path.Join(certFolder, pluginKeyFile))
-}
-
 // StartMosquitto create a test environment with a mosquitto broker on localhost for the given home folder
 // This:
 //  1. Saves the CA, server and client certificates in a temporary folder
@@ -124,7 +111,7 @@ func StartMosquitto(testCerts *TestCerts) (mqCmd *exec.Cmd, tempFolder string, e
 	}
 
 	// mqCmd = Launch(mosqConfigPath)
-	saveCerts(testCerts, tempFolder)
+	SaveCerts(testCerts, tempFolder)
 	// mosquitto must be in the path to execute
 	mosqConf := createMosquittoConf(tempFolder, tempFolder)
 	mosqConfigPath := path.Join(tempFolder, mosquittoConfigFile)

@@ -1,5 +1,5 @@
-// Package discovery with client for service discovery
-package discovery
+// Package discoclient with client for DNS-SD service discovery
+package discoclient
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// DnsSdScan scans zeroconf publications on local domain
+// DnsSDScan scans zeroconf publications on local domain
 // The zeroconf library does not support browsing of all services, but a workaround is
 // to search the service types with "_services._dns-sd._udp" then query each of the service types.
 //  serviceType to look for, or "" to discover all service types (not all services)

@@ -1,6 +1,7 @@
 package consumedthing
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"github.com/sirupsen/logrus"
@@ -23,7 +24,7 @@ type ConsumedThingFactory struct {
 	// account used to access Hub services
 	account *accounts.AccountRecord
 
-	// authClient for obtaining authentication tokens
+	// authClient for obtaining authentication tokens. Not used when connecting with client cert.
 	authClient *tlsclient.TLSClient
 
 	// dirClient for querying the directory service
@@ -51,37 +52,48 @@ type ConsumedThingFactory struct {
 	thingStore *thing.ThingStore
 }
 
-// Authenticate or refresh the access token used by the authentication protocol
+// Authenticate or refresh the access token used by the authentication protocol.
+//
+// This does nothing if authenticated using a client certificate.
+//
 // If a password is provided then obtain a new access and refresh token pair using the account login ID.
 // If no password is provided attempt to refresh the tokens.
 func (ctFactory *ConsumedThingFactory) Authenticate(password string) error {
-	if password != "" {
+	var err error
+	if ctFactory.authClient == nil {
+		logrus.Infof("No auth client. Ignored ")
+	} else if password != "" {
+		logrus.Infof("With password. Attempt to get JWT tokens.")
 		accessToken, err := ctFactory.authClient.ConnectWithJWTLogin(
 			ctFactory.account.LoginName, password, "")
 		if err == nil {
 			ctFactory.accessToken = accessToken
 		}
-		return err
 	} else {
+		logrus.Infof("No password, attempt to refresh JWT tokens")
 		tokens, err := ctFactory.authClient.RefreshJWTTokens("")
 		if err == nil {
 			ctFactory.accessToken = tokens.AccessToken
 		}
-		return err
 	}
+	return err
 }
 
-// Connect the factory to the Hub services and initialize the
-// clients used in the protocol bindings.
-// @param account used to connect
-// @param password to use when no valid refresh token is available
+// Connect the factory to the Hub services and initialize the protocol binding connections.
+//
+// This will attempt to refresh the existing JWT token pair. If connect fails then retry using
+// a valid password for the account.
+//
+// Call Disconnect before shutting down.
+//
+//  password to use when no valid refresh token is available
 func (ctFactory *ConsumedThingFactory) Connect(password string) error {
 	account := ctFactory.account
 
 	// Shutdown existing connections
 	ctFactory.Disconnect()
 
-	logrus.Infof("Connecting account '%s' to: %s", account.ID, account.Address)
+	logrus.Infof("account '%s' to: %s", account.ID, account.Address)
 
 	//ctFactory.connectionStatus.Account = account
 	ctFactory.connectionStatus.StatusMessage = ""
@@ -89,6 +101,7 @@ func (ctFactory *ConsumedThingFactory) Connect(password string) error {
 	ctFactory.thingStore.Load()
 
 	// step 1: authenticate
+	ctFactory.authClient.ConnectNoAuth()
 	err := ctFactory.Authenticate(password)
 	if err != nil {
 		logrus.Errorf("Authentication failed. Retry with password.")
@@ -99,6 +112,35 @@ func (ctFactory *ConsumedThingFactory) Connect(password string) error {
 		// step 3: connect to the mqtt message bus
 		mqttHostPort := fmt.Sprintf("%s:%d", account.Address, account.MqttPort)
 		err = ctFactory.mqttClient.ConnectWithAccessToken(mqttHostPort, account.LoginName, ctFactory.accessToken)
+	}
+	return err
+}
+
+// ConnectWithCert connects the factory to the Hub services using a client certificate
+// for authentication.
+//
+// Call Disconnect before shutting down.
+//
+//  clientCert with the certificate signed by the Hub CA
+func (ctFactory *ConsumedThingFactory) ConnectWithCert(clientCert *tls.Certificate) error {
+	account := ctFactory.account
+
+	// Shutdown existing connections
+	ctFactory.Disconnect()
+
+	logrus.Infof("account '%s' to: %s", account.ID, account.Address)
+
+	//ctFactory.connectionStatus.Account = account
+	ctFactory.connectionStatus.StatusMessage = ""
+	ctFactory.thingStore = thing.NewThingStore(account.ID)
+	ctFactory.thingStore.Load()
+
+	// connecting to the message bus is mandatory.
+	// Things still function if the directory service cannot be reached
+	mqttHostPort := fmt.Sprintf("%s:%d", account.Address, account.MqttPort)
+	err := ctFactory.mqttClient.ConnectWithClientCert(mqttHostPort, clientCert)
+	if err == nil {
+		err = ctFactory.dirClient.ConnectWithClientCert(clientCert)
 	}
 	return err
 }
@@ -114,6 +156,8 @@ func (ctFactory *ConsumedThingFactory) Connect(password string) error {
 //
 // @param td is the Thing TD whose interaction instance to create
 func (ctFactory *ConsumedThingFactory) Consume(td *thing.ThingTD) *ConsumedThing {
+	logrus.Infof("Thing: %s", td.ID)
+
 	ctFactory.ctMapMutex.Lock()
 	defer ctFactory.ctMapMutex.Unlock()
 	cThing, found := ctFactory.ctMap[td.ID]
@@ -135,6 +179,7 @@ func (ctFactory *ConsumedThingFactory) Consume(td *thing.ThingTD) *ConsumedThing
 // Destroy stops and removes the consumed thing.
 // This stops listening to external events
 func (ctFactory *ConsumedThingFactory) Destroy(cThing *ConsumedThing) {
+	logrus.Infof("Thing: %s", cThing.TD.ID)
 	ctFactory.ctMapMutex.Lock()
 	defer ctFactory.ctMapMutex.Unlock()
 
@@ -159,6 +204,11 @@ func (ctFactory *ConsumedThingFactory) Disconnect() {
 	if ctFactory.thingStore != nil {
 		ctFactory.thingStore.Save()
 	}
+}
+
+// GetThingStore returns the Thing store where the factory keeps its things
+func (ctFactory *ConsumedThingFactory) GetThingStore() *thing.ThingStore {
+	return ctFactory.thingStore
 }
 
 // CreateConsumedThingFactory creates a factory instance for consumed things for the given account

@@ -1,141 +1,213 @@
+// Package exposedthing_test with tests for the factory and binding
 package exposedthing_test
 
 import (
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/wostzone/wost-go/pkg/accounts"
+	"github.com/wostzone/wost-go/pkg/consumedthing"
+	"github.com/wostzone/wost-go/pkg/exposedthing"
+	"github.com/wostzone/wost-go/pkg/testenv"
+	"github.com/wostzone/wost-go/pkg/thing"
+	"net/http"
+	"os/exec"
 	"testing"
+	"time"
 )
 
-func TestExpose(t *testing.T) {
-	logrus.Infof("--- TestExpose ---")
-	//td := CreateTestTD()
-	//
-	//// step 1 create the MQTT message bus client
-	//client := mqttclient.NewMqttClient(testPluginID, certs.CaCert, 0)
-	//err := client.ConnectWithClientCert(mqttCertAddress, certs.PluginCert)
-	//assert.NoError(t, err)
-	//
-	//// step 2 create a ExposedThing (why does ConsumedThing uses Consume and ExposedThing CreateExposedThing?)
-	//eThing := exposedthing.CreateExposedThing(testDeviceID, testTD)
-	//err = eThing.Expose()
-	//assert.NoError(t, err)
-	//assert.NotNil(t, eThing)
-	//
-	//// step 3 cleanup
-	//eThing.Destroy()
-	//client.Close()
+var testCerts = testenv.CreateCertBundle()
+var testServer *http.Server
+var testMosqCmd *exec.Cmd
+
+func setupTestFactory(connect bool) (*exposedthing.ExposedThingFactory, error) {
+	var err error
+	testServer = testenv.StartServices(&testCerts)
+	testMosqCmd, _, err = testenv.StartMosquitto(&testCerts)
+	time.Sleep(time.Second)
+
+	factory := exposedthing.CreateExposedThingFactory(testAppID, testCerts.PluginCert, testCerts.CaCert)
+	if connect {
+		err = factory.Connect(testenv.ServerAddress, testenv.MqttPortCert)
+	}
+	return factory, err
 }
 
-//
-//// test both property changed events and events submitted for properties
-//func TestEmitPropertyChange(t *testing.T) {
-//	logrus.Infof("--- TestEmitPropertyChange ---")
-//	const newValue = "value 2"
-//	const newEventValue = "event value"
-//	var propChangeEmitted = false
-//	var rxEventValue = ""
-//	var rxMutex = sync.Mutex{}
-//
-//	// step 1 create the MQTT message bus client
-//	client := mqttclient.NewMqttClient(testPluginID, certs.CaCert, 0)
-//	err := client.ConnectWithClientCert(mqttCertAddress, certs.PluginCert)
-//	assert.NoError(t, err)
-//
-//	// step 2 create a ConsumedThing and ExposedThing
-//	cThing := mqttbinding.Consume(testTD, client)
-//	cThing.SubscribeEvent(testEventName,
-//		func(eventName string, io mqttbinding.InteractionOutput) {
-//			assert.Equal(t, testEventName, eventName)
-//			rxMutex.Lock()
-//			rxEventValue = io.ValueAsString()
-//			rxMutex.Unlock()
-//		})
-//	eThing := mqttbinding.CreateExposedThing(testDeviceID, testTD, client)
-//	eThing.SetPropertyWriteHandler("",
-//		func(eThing *mqttbinding.MqttExposedThing, propName string, io mqttbinding.InteractionOutput) error {
-//			// accept the new value and publish the result
-//			eThing.EmitPropertyChange(propName, io.Value)
-//
-//			// and as map
-//			propMap := map[string]interface{}{propName: io.Value}
-//			eThing.EmitPropertyChanges(propMap, false)
-//			propChangeEmitted = true
-//			return nil
-//		})
-//	err = eThing.Expose()
-//	assert.NoError(t, err)
-//	assert.NotNil(t, eThing)
-//
-//	// step 3 request a property change
-//	err = cThing.WriteProperty(testProp1Name, newValue)
-//	assert.NoError(t, err)
-//	time.Sleep(time.Millisecond * 300)
-//
-//	// step 4 test result. Both exposed and consumed thing must have the new value
-//	cVal, err := cThing.ReadProperty(testProp1Name)
-//	assert.NoError(t, err)
-//	assert.Equal(t, newValue, cVal.ValueAsString())
-//
-//	eVal, err := eThing.ReadProperty(testProp1Name)
-//	assert.NoError(t, err)
-//	assert.Equal(t, newValue, eVal.ValueAsString())
-//	assert.True(t, propChangeEmitted)
-//
-//	// step 5 emit a property as an event
-//	// use the event name as the property name
-//	err = eThing.WriteProperty(testEventName, newEventValue)
-//	assert.NoError(t, err)
-//	time.Sleep(time.Millisecond * 300)
-//
-//	// step 6 test result. Consumed thing must have received event
-//	rxMutex.Lock()
-//	assert.Equal(t, newEventValue, rxEventValue)
-//	rxMutex.Unlock()
-//
-//	// step 5 cleanup
-//	eThing.Destroy()
-//	client.Close()
-//}
-//
-//func TestEmitUnknownPropertyChange(t *testing.T) {
-//	// step 1 create the MQTT message bus client
-//	client := mqttclient.NewMqttClient(testPluginID, certs.CaCert, 0)
-//	err := client.ConnectWithClientCert(mqttCertAddress, certs.PluginCert)
-//	assert.NoError(t, err)
-//
-//	// step 2 create an ExposedThing
-//	eThing := mqttbinding.CreateExposedThing(testDeviceID, testTD, client)
-//
-//	err = eThing.EmitPropertyChange(testProp1Name, "value")
-//	assert.NoError(t, err)
-//
-//	err = eThing.EmitPropertyChange("notaproperty", "value")
-//	assert.Error(t, err)
-//}
-//
-//func TestEmitPropertyChangeNotConnected(t *testing.T) {
-//	// step 1 create the MQTT message bus client but don't connect
-//	client := mqttclient.NewMqttClient(testPluginID, certs.CaCert, 0)
-//	//err := client.ConnectWithClientCert(mqttCertAddress, certs.PluginCert)
-//	//assert.NoError(t, err)
-//
-//	// step 2 create an ExposedThing
-//	eThing := mqttbinding.CreateExposedThing(testDeviceID, testTD, client)
-//	assert.NotNil(t, eThing)
-//
-//	// step 3 emitting property change should fail
-//	err := eThing.EmitPropertyChange(testProp1Name, "value")
-//	assert.Error(t, err)
-//
-//	propMap := make(map[string]interface{})
-//	propMap[testEventName] = "event value"
-//	err = eThing.EmitPropertyChanges(propMap, false)
-//	assert.Error(t, err)
-//
-//	propMap = make(map[string]interface{})
-//	propMap[testProp1Name] = "prop value"
-//	err = eThing.EmitPropertyChanges(propMap, false)
-//	assert.Error(t, err)
-//}
+func tearDown(factory *exposedthing.ExposedThingFactory) {
+	factory.Disconnect()
+	_ = testMosqCmd.Process.Kill()
+	_ = testServer.Close()
+}
+
+func TestCreateFactory(t *testing.T) {
+	logrus.Infof("--- TestCreateFactory ---")
+
+	factory, err := setupTestFactory(true)
+	assert.NoError(t, err)
+	require.NotNil(t, factory)
+	tearDown(factory)
+}
+
+func TestExposeDestroyThing(t *testing.T) {
+	logrus.Infof("--- TestExposeDestroyThing ---")
+
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+	factory.Destroy(eThing)
+
+	tearDown(factory)
+}
+
+func TestExposedThing_EmitEvent(t *testing.T) {
+	const value1 = "value1"
+	logrus.Infof("--- TestExposedThing_EmitEvent ---")
+
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+
+	err := eThing.EmitEvent(testEventName, value1)
+	assert.NoError(t, err)
+
+	factory.Destroy(eThing)
+	tearDown(factory)
+}
+
+func TestExposedThing_EmitPropertiesChange(t *testing.T) {
+	logrus.Infof("--- TestExposedThing_EmitPropertiesChange ---")
+
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+
+	err := eThing.EmitPropertyChange(testProp1Name, testProp1Value)
+	assert.NoError(t, err)
+
+	factory.Destroy(eThing)
+	tearDown(factory)
+}
+
+func TestEmitUnknownPropertyChange(t *testing.T) {
+	logrus.Infof("--- TestEmitUnknownPropertyChange ---")
+
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+
+	err := eThing.EmitPropertyChange(testProp1Name, "value")
+	assert.NoError(t, err)
+
+	err = eThing.EmitPropertyChange("notaproperty", "value")
+	assert.Error(t, err)
+
+	factory.Destroy(eThing)
+	tearDown(factory)
+}
+
+func TestEmitPropertyChangeNotConnected(t *testing.T) {
+	logrus.Infof("--- TestEmitUnknownPropertyChange ---")
+
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+
+	factory.Disconnect()
+	err := eThing.EmitPropertyChange(testProp1Name, "value")
+	assert.Error(t, err)
+
+	tearDown(factory)
+}
+
+func TestExposedThing_HandleActionRequest(t *testing.T) {
+	const value1 = "value1"
+	var rxValue string
+	logrus.Infof("--- TestExposedThing_HandleActionRequest ---")
+
+	// step 1: create the exposed thing from the test TD
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+	eThing.SetActionHandler(testActionName,
+		func(eThing *exposedthing.ExposedThing, actionName string, value *thing.InteractionOutput) error {
+			assert.Equal(t, testActionName, actionName)
+			rxValue = value.ValueAsString()
+			return nil
+		})
+
+	// step 2: setup the consumed side to emit an action
+	account := accounts.AccountRecord{
+		Address:   testenv.ServerAddress,
+		MqttPort:  testenv.MqttPortCert,
+		LoginName: "sss",
+		Enabled:   true,
+	}
+	cFactory := consumedthing.CreateConsumedThingFactory(
+		"etTest", &account, testCerts.CaCert)
+	err := cFactory.ConnectWithCert(testCerts.PluginCert)
+	require.NoError(t, err)
+	cThing := cFactory.Consume(td)
+
+	// step 3 run the test and check result
+	err = cThing.InvokeAction(testActionName, value1)
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 100)
+
+	// cleanup and test
+	factory.Destroy(eThing)
+	tearDown(factory)
+
+	assert.Equal(t, value1, rxValue)
+}
+
+func TestExposedThing_HandleWritePropertyRequest(t *testing.T) {
+	const value2 = "value2"
+	var rxValue string
+	logrus.Infof("--- TestExposedThing_HandleWritePropertyRequest ---")
+
+	// step 1: create the exposed thing from the test TD
+	factory, _ := setupTestFactory(true)
+	td := createTestTD()
+	eThing := factory.Expose(testDeviceID, td)
+	assert.NotNil(t, eThing)
+	eThing.SetPropertyWriteHandler("",
+		func(eThing *exposedthing.ExposedThing, propName string, value *thing.InteractionOutput) error {
+			assert.Equal(t, testProp1Name, propName)
+			rxValue = value.ValueAsString()
+			return nil
+		})
+
+	// step 2: setup the consumed side to write a property
+	account := accounts.AccountRecord{
+		Address:   testenv.ServerAddress,
+		MqttPort:  testenv.MqttPortCert,
+		LoginName: "sss",
+		Enabled:   true,
+	}
+	cFactory := consumedthing.CreateConsumedThingFactory(
+		"etTest", &account, testCerts.CaCert)
+	err := cFactory.ConnectWithCert(testCerts.PluginCert)
+	require.NoError(t, err)
+	cThing := cFactory.Consume(td)
+
+	// step 3 run the test and check result
+	err = cThing.WriteProperty(testProp1Name, value2)
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 100)
+
+	// cleanup and test
+	factory.Destroy(eThing)
+	tearDown(factory)
+
+	assert.Equal(t, value2, rxValue)
+}
+
 //
 //func TestHandleActionRequest(t *testing.T) {
 //	logrus.Infof("--- TestHandleActionRequest ---")

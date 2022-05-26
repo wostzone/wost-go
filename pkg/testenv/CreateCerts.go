@@ -12,6 +12,7 @@ import (
 	"github.com/wostzone/wost-go/pkg/certsclient"
 	"math/big"
 	"net"
+	"path"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -165,4 +166,16 @@ func CreateX509Cert(cn string, ou string, isServer bool, pubKey *ecdsa.PublicKey
 		logrus.Panicf("CreateSignedCert. Failed creating cert: %s", err)
 	}
 	return cert, certDerBytes, err
+}
+
+// SaveCerts saves the given CA and mosquitto server key and certificates as PEM files
+func SaveCerts(testCerts *TestCerts, certFolder string) {
+	certsclient.SaveX509CertToPEM(testCerts.CaCert, path.Join(certFolder, caCertFile))
+	certsclient.SaveKeysToPEM(testCerts.CaKey, path.Join(certFolder, caKeyFile))
+	certsclient.SaveTLSCertToPEM(testCerts.ServerCert,
+		path.Join(certFolder, serverCertFile),
+		path.Join(certFolder, serverKeyFile))
+	certsclient.SaveTLSCertToPEM(testCerts.PluginCert,
+		path.Join(certFolder, pluginCertFile),
+		path.Join(certFolder, pluginKeyFile))
 }
