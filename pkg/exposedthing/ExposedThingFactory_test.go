@@ -11,7 +11,9 @@ import (
 	"github.com/wostzone/wost-go/pkg/testenv"
 	"github.com/wostzone/wost-go/pkg/thing"
 	"net/http"
+	"os"
 	"os/exec"
+	"path"
 	"testing"
 	"time"
 )
@@ -19,11 +21,13 @@ import (
 var testCerts = testenv.CreateCertBundle()
 var testServer *http.Server
 var testMosqCmd *exec.Cmd
+var tempFolder string // for test environment
 
 func setupTestFactory(connect bool) (*exposedthing.ExposedThingFactory, error) {
 	var err error
+	tempFolder = path.Join(os.TempDir(), "wost-test-exposedthing")
 	testServer = testenv.StartServices(&testCerts)
-	testMosqCmd, _, err = testenv.StartMosquitto(&testCerts)
+	testMosqCmd, err = testenv.StartMosquitto(&testCerts, tempFolder)
 	time.Sleep(time.Second)
 
 	factory := exposedthing.CreateExposedThingFactory(testAppID, testCerts.PluginCert, testCerts.CaCert)
@@ -37,6 +41,7 @@ func tearDown(factory *exposedthing.ExposedThingFactory) {
 	factory.Disconnect()
 	_ = testMosqCmd.Process.Kill()
 	_ = testServer.Close()
+	testenv.StopMosquitto(testMosqCmd, tempFolder)
 }
 
 func TestCreateFactory(t *testing.T) {

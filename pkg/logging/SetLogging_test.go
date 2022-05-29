@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestLogging(t *testing.T) {
@@ -25,12 +24,4 @@ func TestLogging(t *testing.T) {
 	logrus.Error("Hello error")
 	//assert.FileExists(t, logFile)
 	//os.Remove(logFile)
-}
-
-func TestLoggingBadFile(t *testing.T) {
-	logFile := "/root/cantloghere.log"
-
-	err := logging.SetLogging("info", logFile)
-	assert.Error(t, err)
-	os.Remove(logFile)
 }

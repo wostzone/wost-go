@@ -1,5 +1,5 @@
 // Package discoclient with client for DNS-SD service discovery
-package discoclient
+package discovery
 
 import (
 	"context"

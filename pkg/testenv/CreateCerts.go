@@ -12,6 +12,7 @@ import (
 	"github.com/wostzone/wost-go/pkg/certsclient"
 	"math/big"
 	"net"
+	"os"
 	"path"
 	"time"
 
@@ -169,7 +170,12 @@ func CreateX509Cert(cn string, ou string, isServer bool, pubKey *ecdsa.PublicKey
 }
 
 // SaveCerts saves the given CA and mosquitto server key and certificates as PEM files
+// If the certFolder doesn't exist it will be created with permissions 700
 func SaveCerts(testCerts *TestCerts, certFolder string) {
+	if _, err := os.Stat(certFolder); err != nil {
+		os.MkdirAll(certFolder, 0700)
+	}
+	logrus.Infof("Saving test certs into: %s", certFolder)
 	certsclient.SaveX509CertToPEM(testCerts.CaCert, path.Join(certFolder, caCertFile))
 	certsclient.SaveKeysToPEM(testCerts.CaKey, path.Join(certFolder, caKeyFile))
 	certsclient.SaveTLSCertToPEM(testCerts.ServerCert,

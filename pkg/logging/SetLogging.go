@@ -17,9 +17,8 @@ import (
 // Intended for standardize logging in the hub and plugins
 //  levelName is the requested logging level: "error", "warning", "info", "debug"
 //  filename is the output log file full name including path, use "" for stderr
-func SetLogging(levelName string, filename string) error {
+func SetLogging(levelName string, filename string) {
 	loggingLevel := logrus.DebugLevel
-	var err error
 	logrus.SetReportCaller(true)
 
 	if levelName != "" {
@@ -38,7 +37,7 @@ func SetLogging(levelName string, filename string) error {
 	if filename != "" {
 		logFileHandle, err2 := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
 		if err2 != nil {
-			err = fmt.Errorf("SetLogging: Unable to open logfile: %s", err2)
+			logrus.Errorf("SetLogging: Unable to open logfile: %s", err2)
 		} else {
 			logrus.Warnf("SetLogging: Send '%s' logging to '%s'", levelName, filename)
 			logOut = io.MultiWriter(logOut, logFileHandle)
@@ -66,9 +65,13 @@ func SetLogging(levelName string, filename string) error {
 
 				// remove the path from the function name
 				_, funcName = path.Split(funcName)
-				fileInfo := fmt.Sprintf(" %s:%v", path.Base(f.File), f.Line)
-				fileInfo = fmt.Sprintf("%-25s", fileInfo)
-				return funcName, fileInfo
+				fileName := path.Base(f.File)
+				//if len(fileName) > 15 {
+				//	fileName = fileName[:10] + "..."
+				//}
+				fileInfo := fmt.Sprintf(" %s:%v", fileName, f.Line)
+				fileInfo = fmt.Sprintf("%-17s", fileInfo)
+				return "- " + funcName + ": ", fileInfo
 			},
 		})
 	logrus.SetOutput(logOut)
@@ -78,6 +81,4 @@ func SetLogging(levelName string, filename string) error {
 	// logrus.AddHook(hook)
 
 	// logrus.SetReportCaller(false) // publisher logging includes caller and file:line#
-
-	return err
 }

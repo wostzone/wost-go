@@ -27,10 +27,7 @@ var mqttUnpwAddress = fmt.Sprintf("%s:%d", testenv.ServerAddress, testenv.MqttPo
 // CA, server and plugin test certificate
 var certs testenv.TestCerts
 
-var homeFolder string
-var configFolder string
-
-// var homeFolder string
+var tempFolder string
 
 const TEST_TOPIC = "test"
 
@@ -44,15 +41,10 @@ const testPluginID = "test-plugin"
 
 // TestMain - launch mosquitto
 func TestMain(m *testing.M) {
-	cwd, _ := os.Getwd()
-	homeFolder = path.Join(cwd, "../../test")
-	//configFolder = path.Join(homeFolder, "config")
-	//certFolder := path.Join(homeFolder, "certs")
-	//os.Chdir(homeFolder)
-
+	tempFolder = path.Join(os.TempDir(), "wost-test-mqttclient")
 	logging.SetLogging("info", "")
 	certs = testenv.CreateCertBundle()
-	mosquittoCmd, tempFolder, err := testenv.StartMosquitto(&certs)
+	mosquittoCmd, err := testenv.StartMosquitto(&certs, tempFolder)
 	if err != nil {
 		logrus.Fatalf("Unable to start mosquitto: %s", err)
 	}

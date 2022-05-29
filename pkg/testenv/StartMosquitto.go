@@ -5,6 +5,7 @@ package testenv
 import (
 	"bytes"
 	"fmt"
+	"github.com/wostzone/wost-go/pkg/logging"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -94,27 +95,30 @@ func createMosquittoConf(configFolder string, certFolder string) string {
 
 // StartMosquitto create a test environment with a mosquitto broker on localhost for the given home folder
 // This:
-//  1. Saves the CA, server and client certificates in a temporary folder
-//  2. Generates a mosquitto configuration in the temporary folder
-//  3. Launches a mosquitto broker for testing.
+//  1. Set logging to info
+//  2. create the cert/config folder if it doesn't exist
+//  3. Saves the CA, server and client certificates in the cert/config folder
+//  4. Generates a mosquitto configuration in the cert/config folder
+//  5. Launches a mosquitto broker for testing.
 //
 // mqCmd.Process.Kill() to end the mosquitto broker
 //
 //  testCerts are the certificates to use.
+//  configFolder to store certificates and configuration. Will be created if it doesn't exist.
 // Returns the mosquitto process, the temp folder for cleanup and error code in case of failure
-func StartMosquitto(testCerts *TestCerts) (mqCmd *exec.Cmd, tempFolder string, err error) {
+func StartMosquitto(testCerts *TestCerts, configFolder string) (mqCmd *exec.Cmd, err error) {
+	logging.SetLogging("info", "")
 
 	logrus.Infof("--- Starting mosquitto broker ---")
-	tempFolder, err = ioutil.TempDir("", "wost-go-testenv")
-	if err != nil {
-		panic("Unable to create temp folder for test environment")
+	if configFolder == "" {
+		configFolder, _ = ioutil.TempDir("", "wost-go-testenv")
 	}
 
 	// mqCmd = Launch(mosqConfigPath)
-	SaveCerts(testCerts, tempFolder)
+	SaveCerts(testCerts, configFolder)
 	// mosquitto must be in the path to execute
-	mosqConf := createMosquittoConf(tempFolder, tempFolder)
-	mosqConfigPath := path.Join(tempFolder, mosquittoConfigFile)
+	mosqConf := createMosquittoConf(configFolder, configFolder)
+	mosqConfigPath := path.Join(configFolder, mosquittoConfigFile)
 	err = ioutil.WriteFile(mosqConfigPath, []byte(mosqConf), 0644)
 	if err != nil {
 		logrus.Fatalf("Setup: Unable to write mosquitto config file: %s", err)
@@ -131,12 +135,12 @@ func StartMosquitto(testCerts *TestCerts) (mqCmd *exec.Cmd, tempFolder string, e
 	// Give mosquitto some time to start
 	time.Sleep(100 * time.Millisecond)
 
-	return mqCmd, tempFolder, err
+	return mqCmd, err
 }
 
 // StopMosquitto stops the mosquitto broker and cleans up the test environment
 //  cmd is the command returned by StartMosquitto
-//  tempFolder is the folder returned by StartMosquitto. This will be deleted.
+//  tempFolder is the folder returned by StartMosquitto. This will be deleted. Use "" to keep it
 func StopMosquitto(cmd *exec.Cmd, tempFolder string) {
 	cmd.Process.Signal(os.Interrupt)
 	time.Sleep(100 * time.Millisecond)

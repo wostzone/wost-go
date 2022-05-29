@@ -1,5 +1,5 @@
-// Package discoclient with client for service discovery
-package discoclient
+// Package discovery with client for service discovery
+package discovery
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// DiscoverServices searches for WoST services with the given name and returns all its instances.
+// DiscoClient searches for WoST services with the given name and returns all its instances.
 // This is a wrapper around various means of discovering services and supports the discovery of multiple
 // instances of the same service (name). The serviceName must contain the simple name of the WoST service.
 // For example, use 'idprov' for the provisioning service which DNS-SD will publish as _idprov._tcp.
@@ -18,7 +18,7 @@ import (
 //  waitSec is the time to wait for the result
 // Returns the first instance address, port and discovery parameters, plus records of additional discoveries,
 // or an error if nothing is found
-func DiscoverServices(serviceName string, waitSec int) (
+func DiscoClient(serviceName string, waitSec int) (
 	address string, port uint, params map[string]string,
 	records []*zeroconf.ServiceEntry, err error) {
 	params = make(map[string]string)

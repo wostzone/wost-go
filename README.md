@@ -5,10 +5,27 @@ IoT "Thing" devices and for developing consumers of Thing information.
 
 ## Summary
 
-This Go library provides common building blocks for creating WoST Hub clients such as IoT devices, protocol bindings and
-consumers.
+This Go library provides packages for building WoST services, IoT devices and clients, including:
+
+- building TD (Thing Description) documents
+- exposing Things for IoT devices
+- consume Things for consumers
+- authenticate using certificates, BASIC or JWT tokens
+- discover services using DNS-SD
+- managing certificates
+- connecting to the MQTT message bus
+- launch a test environment with a MQTT broker
+
+## Packages
+
+### config
+
+Loading of Hub, service or device yaml configuration.
 
 ### certsclient
+
+Management of keys
+Loading and saving of TLS certificates
 
 ### config
 
@@ -44,7 +61,16 @@ provides the needed protocol bindings.
 Exposed Things are defined in
 the [WoT scripting API](https://w3c.github.io/wot-scripting-api/#the-exposedthing-interface)
 
+### hubnet
+
+Helper functions for:
+
+- Determine the outbound interface(s)
+- Obtain bearer token for authentication
+
 ### logging
+
+Standardized logging formatting using logrus. This includes the sourcefile name and line number.
 
 ### mqttclient
 
@@ -138,6 +164,13 @@ client.Post(path, message)
 client.Close()
 ```
 
+### tlsserver
+
+Server of HTTP/TLS connections that supports certificate and username/password authentication, and authorization.
+
+Used to build Hub services that connect over HTTPS, such as the IDProv protocol server and the Thingdir directory
+server.
+
 ## vocab
 
 Ontology with vocabulary used to describe Things. This is based on terminology from the WoT working group and other
@@ -146,3 +179,7 @@ source.
 When no authorative source is known, the terminology is defined as part of the WoST IoT vocabulary. This includes
 device-type names, Thing property types, property names, unit names and TD defined terms for describing a Thing
 Description document.
+
+### watcher
+
+Simple file watcher that handles renaming of files.
