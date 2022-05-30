@@ -5,12 +5,12 @@ package testenv
 import (
 	"bytes"
 	"fmt"
-	"github.com/wostzone/wost-go/pkg/logging"
 	"html/template"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -107,7 +107,7 @@ func createMosquittoConf(configFolder string, certFolder string) string {
 //  configFolder to store certificates and configuration. Will be created if it doesn't exist.
 // Returns the mosquitto process, the temp folder for cleanup and error code in case of failure
 func StartMosquitto(testCerts *TestCerts, configFolder string) (mqCmd *exec.Cmd, err error) {
-	logging.SetLogging("info", "")
+	mutex := sync.Mutex{}
 
 	logrus.Infof("--- Starting mosquitto broker ---")
 	if configFolder == "" {
@@ -129,12 +129,19 @@ func StartMosquitto(testCerts *TestCerts, configFolder string) (mqCmd *exec.Cmd,
 	mqCmd.Stdout = os.Stdout
 	mqCmd.Start()
 	go func() {
-		mqCmd.Wait()
+		err2 := mqCmd.Wait()
+		mutex.Lock()
+		err = err2
+		mutex.Unlock()
 		logrus.Infof("--- Mosquitto has ended ---")
 	}()
 	// Give mosquitto some time to start
 	time.Sleep(100 * time.Millisecond)
-
+	mutex.Lock()
+	defer mutex.Unlock()
+	if err != nil {
+		logrus.Fatalf("Failed starting mosquitto: %s", err)
+	}
 	return mqCmd, err
 }
 
@@ -142,6 +149,7 @@ func StartMosquitto(testCerts *TestCerts, configFolder string) (mqCmd *exec.Cmd,
 //  cmd is the command returned by StartMosquitto
 //  tempFolder is the folder returned by StartMosquitto. This will be deleted. Use "" to keep it
 func StopMosquitto(cmd *exec.Cmd, tempFolder string) {
+	logrus.Infof("--- Stopping mosquitto broker ---")
 	cmd.Process.Signal(os.Interrupt)
 	time.Sleep(100 * time.Millisecond)
 

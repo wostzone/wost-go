@@ -2,14 +2,15 @@ package mqttclient_test
 
 import (
 	"fmt"
-	"github.com/wostzone/wost-go/pkg/logging"
-	"github.com/wostzone/wost-go/pkg/mqttclient"
-	"github.com/wostzone/wost-go/pkg/testenv"
 	"os"
 	"path"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/wostzone/wost-go/pkg/logging"
+	"github.com/wostzone/wost-go/pkg/mqttclient"
+	"github.com/wostzone/wost-go/pkg/testenv"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -41,12 +42,12 @@ const testPluginID = "test-plugin"
 
 // TestMain - launch mosquitto
 func TestMain(m *testing.M) {
-	tempFolder = path.Join(os.TempDir(), "wost-test-mqttclient")
+	tempFolder = path.Join(os.TempDir(), "wost-mqttclient-test")
 	logging.SetLogging("info", "")
 	certs = testenv.CreateCertBundle()
 	mosquittoCmd, err := testenv.StartMosquitto(&certs, tempFolder)
 	if err != nil {
-		logrus.Fatalf("Unable to start mosquitto: %s", err)
+		logrus.Fatalf("MQTT client testing failed. Unable to start mosquitto: %s", err)
 	}
 
 	result := m.Run()

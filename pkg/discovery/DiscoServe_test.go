@@ -2,11 +2,12 @@ package discovery_test
 
 import (
 	"fmt"
-	"github.com/wostzone/wost-go/pkg/discovery"
-	"github.com/wostzone/wost-go/pkg/hubnet"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/wostzone/wost-go/pkg/discovery"
+	"github.com/wostzone/wost-go/pkg/hubnet"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,7 +38,7 @@ func TestDiscover(t *testing.T) {
 	assert.Equal(t, testServicePort, port)
 	assert.Equal(t, testServicePath, discoParams["path"])
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond) // prevent race error in discovery.server
 	discoServer.Shutdown()
 }
 
@@ -58,7 +59,7 @@ func TestDiscoViaDomainName(t *testing.T) {
 	assert.True(t, strings.HasPrefix(rec0.HostName, testServiceAddress))
 	assert.Equal(t, testServicePort, discoPort)
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond) // prevent race error in discovery.server
 	discoServer.Shutdown()
 }
 
@@ -102,6 +103,7 @@ func TestDiscoverNotFound(t *testing.T) {
 	_ = records
 	assert.Error(t, err)
 
+	time.Sleep(time.Millisecond) // prevent race error in discovery.server
 	discoServer.Shutdown()
 	assert.Error(t, err)
 }
@@ -124,6 +126,7 @@ func TestExternalAddress(t *testing.T) {
 
 	// expect a warning
 	assert.NoError(t, err)
+	time.Sleep(time.Millisecond) // prevent race error in discovery.server
 	discoServer.Shutdown()
 }
 

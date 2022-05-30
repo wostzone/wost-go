@@ -3,8 +3,9 @@
 
 .FORCE: 
 
-test:  ## run tests
-	go test -race -failfast -p 1 -v ./...
+test:  ## run tests after cleaning cache
+	go clean -testcache
+	go test -race -failfast -p 1 -cover -v ./pkg/...
 
 
 help: ## Show this help
