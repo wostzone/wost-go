@@ -12,9 +12,9 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
 	github.com/wostzone/hub/lib/client v0.0.0-20220515042304-a67a4a917e3b
-	golang.org/x/net v0.0.0-20211105192438-b53810dc28af
+	golang.org/x/net v0.0.0-20220526153639-5463443f8c37
 	gopkg.in/square/go-jose.v2 v2.6.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -24,5 +24,5 @@ require (
 	github.com/miekg/dns v1.1.43 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
-	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 )
