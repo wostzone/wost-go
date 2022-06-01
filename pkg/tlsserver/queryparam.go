@@ -2,9 +2,10 @@ package tlsserver
 
 import (
 	"fmt"
-	"github.com/wostzone/wost-go/pkg/tlsclient"
 	"net/http"
 	"strconv"
+
+	"github.com/wostzone/wost-go/pkg/tlsclient"
 )
 
 // GetQueryInt reads the request query parameter and convert it to an integer
@@ -45,7 +46,7 @@ func (srv *TLSServer) GetQueryLimitOffset(request *http.Request, defaultLimit in
 	if err == nil {
 		offset, err = srv.GetQueryInt(request, tlsclient.ParamOffset, 0)
 	}
-	return
+	return limit, offset, err
 }
 
 // GetQueryString reads the request query parameter and returns the first string
