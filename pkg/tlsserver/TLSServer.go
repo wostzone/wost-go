@@ -7,11 +7,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/rs/cors"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/cors"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -126,9 +127,9 @@ func (srv *TLSServer) Start() error {
 	var err error
 	var mutex = sync.Mutex{}
 
-	logrus.Infof("TLSServer.Start Starting TLS server on address: %s:%d.", srv.address, srv.port)
+	logrus.Infof("Starting TLS server on address: %s:%d.", srv.address, srv.port)
 	if srv.caCert == nil || srv.serverCert == nil {
-		err := fmt.Errorf("TLSServer.Start: missing CA or server certificate")
+		err := fmt.Errorf("missing CA or server certificate")
 		logrus.Error(err)
 		return err
 	}
@@ -180,12 +181,12 @@ func (srv *TLSServer) Start() error {
 	}
 	// mutex to capture error result in case startup in the background failed
 	go func() {
-
 		// serverTLSConf contains certificate and key
 		err2 := srv.httpServer.ListenAndServeTLS("", "")
 		if err2 != nil && err2 != http.ErrServerClosed {
 			mutex.Lock()
-			err = fmt.Errorf("TLSServer.Start: ListenAndServeTLS: %s", err2)
+			//t := err2.Error()
+			err = fmt.Errorf("ListenAndServeTLS: %s", err2.Error())
 			logrus.Error(err)
 			mutex.Unlock()
 		}
@@ -199,7 +200,7 @@ func (srv *TLSServer) Start() error {
 
 // Stop the TLS server and close all connections
 func (srv *TLSServer) Stop() {
-	logrus.Infof("TLSServer.Stop: Stopping TLS server")
+	logrus.Infof("Stopping TLS server")
 
 	if srv.httpServer != nil {
 		srv.httpServer.Shutdown(context.Background())

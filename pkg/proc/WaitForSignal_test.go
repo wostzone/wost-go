@@ -8,7 +8,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wostzone/hub/lib/client/pkg/proc"
+
+	"github.com/wostzone/wost-go/pkg/proc"
 )
 
 func TestWaitForSignal(t *testing.T) {

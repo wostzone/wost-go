@@ -4,12 +4,14 @@ package config
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/sirupsen/logrus"
-	"github.com/wostzone/wost-go/pkg/certsclient"
-	"github.com/wostzone/wost-go/pkg/hubnet"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
+
+	"github.com/wostzone/wost-go/pkg/certsclient"
+	"github.com/wostzone/wost-go/pkg/hubnet"
 )
 
 // DefaultHubConfigName with the configuration file name of the hub
@@ -103,15 +105,15 @@ type HubConfig struct {
 	// enable to keep using access tokens between restarts
 	KeepServerCertOnStartup bool `yaml:"keepServerCertOnStartup"`
 
-	// path to CA certificate in PEM format. Default is certs/caCert.pem
+	// path to CA certificate in PEM format. Default is homeFolder/certs/caCert.pem
 	CaCertFile string `yaml:"caCertFile"`
-	// path to client x509 certificate in PEM format. Default is certs/{clientID}Cert.pem
+	// path to client x509 certificate in PEM format. Default is homeFolder/certs/{clientID}Cert.pem
 	ClientCertFile string `yaml:"clientCertFile"`
-	// path to client private key in PEM format. Default is certs/{clientID}Key.pem
+	// path to client private key in PEM format. Default is homeFolder/certs/{clientID}Key.pem
 	ClientKeyFile string `yaml:"clientKeyFile"`
-	// path to plugin client x509 certificate in PEM format. Default is certs/PluginCert.pem
+	// path to plugin client x509 certificate in PEM format. Default is homeFolder/certs/PluginCert.pem
 	PluginCertFile string `yaml:"pluginCertFile"`
-	// path to plugin client private key in PEM format. Default is certs/PluginKey.pem
+	// path to plugin client private key in PEM format. Default is homeFolder/certs/PluginKey.pem
 	PluginKeyFile string `yaml:"pluginKeyFile"`
 
 	// CaCert contains the loaded CA certificate needed for establishing trusted connections to the
