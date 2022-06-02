@@ -2,20 +2,22 @@
 package exposedthing_test
 
 import (
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/wostzone/wost-go/pkg/accounts"
-	"github.com/wostzone/wost-go/pkg/consumedthing"
-	"github.com/wostzone/wost-go/pkg/exposedthing"
-	"github.com/wostzone/wost-go/pkg/testenv"
-	"github.com/wostzone/wost-go/pkg/thing"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"testing"
 	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/wostzone/wost-go/pkg/accounts"
+	"github.com/wostzone/wost-go/pkg/consumedthing"
+	"github.com/wostzone/wost-go/pkg/exposedthing"
+	"github.com/wostzone/wost-go/pkg/testenv"
+	"github.com/wostzone/wost-go/pkg/thing"
 )
 
 var testCerts = testenv.CreateCertBundle()
@@ -58,7 +60,7 @@ func TestExposeDestroyThing(t *testing.T) {
 
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 	factory.Destroy(eThing)
 
@@ -71,7 +73,7 @@ func TestExposedThing_EmitEvent(t *testing.T) {
 
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 
 	err := eThing.EmitEvent(testEventName, value1)
@@ -86,10 +88,10 @@ func TestExposedThing_EmitPropertiesChange(t *testing.T) {
 
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 
-	err := eThing.EmitPropertyChange(testProp1Name, testProp1Value)
+	err := eThing.EmitPropertyChange(testProp1Name, testProp1Value, false)
 	assert.NoError(t, err)
 
 	factory.Destroy(eThing)
@@ -101,13 +103,13 @@ func TestEmitUnknownPropertyChange(t *testing.T) {
 
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 
-	err := eThing.EmitPropertyChange(testProp1Name, "value")
+	err := eThing.EmitPropertyChange(testProp1Name, "value", false)
 	assert.NoError(t, err)
 
-	err = eThing.EmitPropertyChange("notaproperty", "value")
+	err = eThing.EmitPropertyChange("notaproperty", "value", false)
 	assert.Error(t, err)
 
 	factory.Destroy(eThing)
@@ -119,11 +121,11 @@ func TestEmitPropertyChangeNotConnected(t *testing.T) {
 
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 
 	factory.Disconnect()
-	err := eThing.EmitPropertyChange(testProp1Name, "value")
+	err := eThing.EmitPropertyChange(testProp1Name, "value", false)
 	assert.Error(t, err)
 
 	tearDown(factory)
@@ -137,7 +139,7 @@ func TestExposedThing_HandleActionRequest(t *testing.T) {
 	// step 1: create the exposed thing from the test TD
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 	eThing.SetActionHandler(testActionName,
 		func(eThing *exposedthing.ExposedThing, actionName string, value *thing.InteractionOutput) error {
@@ -179,7 +181,7 @@ func TestExposedThing_HandleWritePropertyRequest(t *testing.T) {
 	// step 1: create the exposed thing from the test TD
 	factory, _ := setupTestFactory(true)
 	td := createTestTD()
-	eThing := factory.Expose(testDeviceID, td)
+	eThing, _ := factory.Expose(testDeviceID, td)
 	assert.NotNil(t, eThing)
 	eThing.SetPropertyWriteHandler("",
 		func(eThing *exposedthing.ExposedThing, propName string, value *thing.InteractionOutput) error {

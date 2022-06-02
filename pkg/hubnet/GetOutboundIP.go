@@ -22,7 +22,7 @@ func GetOutboundIP(destination string) net.IP {
 	// the connection needed to connect to it.
 	conn, err := net.Dial("udp", destination+":80")
 	if err != nil {
-		logrus.Errorf("GetIPAddr: %s", err)
+		logrus.Error(err)
 		return nil
 	}
 	defer conn.Close()

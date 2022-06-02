@@ -33,10 +33,10 @@ func DiscoServe(instanceID string, serviceName string,
 	address string, port uint, params map[string]string) (*zeroconf.Server, error) {
 	var ips []string
 
-	logrus.Infof("DiscoServe serviceID=%s, name=%s, address: %s:%d, params=%s",
+	logrus.Infof("ServiceID=%s, name=%s, address: %s:%d, params=%s",
 		instanceID, serviceName, address, port, params)
 	if serviceName == "" {
-		err := fmt.Errorf("DiscoServe: empty serviceName")
+		err := fmt.Errorf("Empty serviceName")
 		return nil, err
 	}
 
@@ -52,7 +52,7 @@ func DiscoServe(instanceID string, serviceName string,
 		actualIP, err := net.LookupIP(address)
 		if err != nil {
 			// can't continue without a valid address
-			logrus.Errorf("DiscoServe: Provided address '%s' is not an IP and cannot be resolved: %s", address, err)
+			logrus.Errorf("Provided address '%s' is not an IP and cannot be resolved: %s", address, err)
 			return nil, err
 		}
 		ips = []string{actualIP[0].String()}
@@ -60,7 +60,7 @@ func DiscoServe(instanceID string, serviceName string,
 
 	ifaces, err := hubnet.GetInterfaces(ips[0])
 	if err != nil || len(ifaces) == 0 {
-		logrus.Warningf("DiscoServe: Address %s does not appear on any interface. Continuing anyways", ips[0])
+		logrus.Warningf("Address %s does not appear on any interface. Continuing anyways", ips[0])
 	}
 	// add a text record with key=value pairs
 	textRecord := []string{}
@@ -72,7 +72,7 @@ func DiscoServe(instanceID string, serviceName string,
 	server, err := zeroconf.RegisterProxy(
 		instanceID, serviceType, domain, int(port), hostname, ips, textRecord, ifaces)
 	if err != nil {
-		logrus.Errorf("DiscoServe: Failed to start the zeroconf server: %s", err)
+		logrus.Errorf("Failed to start the zeroconf server: %s", err)
 	}
 	return server, err
 }

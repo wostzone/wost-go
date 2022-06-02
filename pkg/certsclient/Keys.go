@@ -55,7 +55,7 @@ func PrivateKeyFromPEM(pemEncodedKey string) (privateKey *ecdsa.PrivateKey, err 
 		var ok bool
 		privateKey, ok = rawPrivateKey.(*ecdsa.PrivateKey)
 		if !ok || privateKey == nil {
-			err = errors.New("PrivateKeyFromPem: PEM is not a ECDSA key format")
+			err = errors.New("PEM is not a ECDSA key format")
 		}
 	}
 	return privateKey, err
@@ -75,7 +75,7 @@ func PublicKeyFromPEM(pemEncodedPub string) (publicKey *ecdsa.PublicKey, err err
 		var ok bool
 		publicKey, ok = genericPublicKey.(*ecdsa.PublicKey)
 		if !ok || publicKey == nil {
-			err = errors.New("PublicKeyFromPEM: Not a ECDSA public key")
+			err = errors.New("Not a ECDSA public key")
 		}
 	}
 

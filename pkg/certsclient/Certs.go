@@ -114,7 +114,7 @@ func SaveX509CertToPEM(cert *x509.Certificate, pemPath string) error {
 func X509CertFromPEM(certPEM string) (*x509.Certificate, error) {
 	caCertBlock, _ := pem.Decode([]byte(certPEM))
 	if caCertBlock == nil {
-		return nil, errors.New("ConverX509CertFromPEM pem.Decode failed")
+		return nil, errors.New("pem.Decode failed")
 	}
 	caCert, err := x509.ParseCertificate(caCertBlock.Bytes)
 	return caCert, err

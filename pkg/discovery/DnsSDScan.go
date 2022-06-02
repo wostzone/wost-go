@@ -25,7 +25,7 @@ func DnsSDScan(sdType string, waitSec int) ([]*zeroconf.ServiceEntry, error) {
 	records := make([]*zeroconf.ServiceEntry, 0)
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		logrus.Errorf("DnsSDScan: Failed to create resolver instance: %s", err)
+		logrus.Errorf("Failed to create resolver instance: %s", err)
 		return nil, err
 	}
 
@@ -34,13 +34,13 @@ func DnsSDScan(sdType string, waitSec int) ([]*zeroconf.ServiceEntry, error) {
 	go func(results <-chan *zeroconf.ServiceEntry) {
 		for entry := range results {
 			rec := entry.ServiceRecord
-			logrus.Infof("DnsSDScan: Found service instance '%s' of type '%s', domain '%s'. ip4:port=%s:%d",
+			logrus.Infof("Found service instance '%s' of type '%s', domain '%s'. ip4:port=%s:%d",
 				rec.Instance, rec.ServiceName(), rec.Domain, entry.AddrIPv4, entry.Port)
 			mu.Lock()
 			records = append(records, entry)
 			mu.Unlock()
 		}
-		logrus.Infof("DnsSDScan: No more entries.")
+		logrus.Infof("No more entries.")
 	}(entries)
 
 	duration := time.Second * time.Duration(waitSec)
@@ -49,7 +49,7 @@ func DnsSDScan(sdType string, waitSec int) ([]*zeroconf.ServiceEntry, error) {
 
 	err = resolver.Browse(ctx, sdType, sdDomain, entries)
 	if err != nil {
-		logrus.Fatalf("DnsSDScan: Failed to browse: %s", err.Error())
+		logrus.Fatalf("Failed to browse: %s", err.Error())
 	}
 	<-ctx.Done()
 	mu.Lock()

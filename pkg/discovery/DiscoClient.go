@@ -29,7 +29,7 @@ func DiscoClient(serviceName string, waitSec int) (
 		return "", 0, nil, nil, err
 	}
 	if len(records) == 0 {
-		err = fmt.Errorf("DiscoverService: No service of name '%s' (serviceType=%s) found after %d seconds", serviceName, serviceType, waitSec)
+		err = fmt.Errorf("no service of name '%s' (serviceType=%s) found after %d seconds", serviceName, serviceType, waitSec)
 		return "", 0, nil, nil, err
 	}
 	rec0 := records[0]
@@ -49,7 +49,7 @@ func DiscoClient(serviceName string, waitSec int) (
 	for _, txtRecord := range rec0.Text {
 		kv := strings.Split(txtRecord, "=")
 		if len(kv) != 2 {
-			logrus.Infof("DiscoverService: Ignoring non key-value '%s' in TXT record", txtRecord)
+			logrus.Infof("Ignoring non key-value '%s' in TXT record", txtRecord)
 		} else {
 			params[kv[0]] = kv[1]
 		}

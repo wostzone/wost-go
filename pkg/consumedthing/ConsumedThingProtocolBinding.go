@@ -2,11 +2,13 @@ package consumedthing
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/sirupsen/logrus"
+
 	"github.com/wostzone/wost-go/pkg/mqttclient"
 	"github.com/wostzone/wost-go/pkg/thing"
 	"github.com/wostzone/wost-go/pkg/tlsclient"
-	"strings"
 )
 
 // ConsumedThingProtocolBinding is the protocol binding for consumed things
@@ -23,11 +25,12 @@ type ConsumedThingProtocolBinding struct {
 	cThing     *ConsumedThing
 }
 
-// Handle incoming events.
-// If the event name is 'properties' then the payload is a map of property name-value pairs.
-// If the event is a propertyName then the payload is the property value of that event.
-// Otherwise the event payload is described in the TD event affordance.
-// Last invoke the subscriber to the event name, if any, or the default subscriber
+// Handle incoming events or property update message.
+//
+// If the event is a property name then the payload is the property value according to the property affordance.
+// If the event is an event name then the payload is the event value according to the event affordance.
+// If the name is both an event and property defined in the TD then it is handled as both event and property.
+//
 //  address is the MQTT topic that the event is published on as: things/{thingID}/event/{eventName}
 //  whereas message is the body of the event.
 func (binding *ConsumedThingProtocolBinding) handleEvent(topic string, message []byte) {
@@ -40,8 +43,14 @@ func (binding *ConsumedThingProtocolBinding) handleEvent(topic string, message [
 		return
 	}
 	eventName := parts[3]
-
-	binding.cThing.HandleEvent(eventName, message)
+	_, found := binding.td.Events[eventName]
+	if found {
+		binding.cThing.HandleEvent(eventName, message)
+	}
+	_, found = binding.td.Properties[eventName]
+	if found {
+		binding.cThing.HandlePropertyChange(eventName, message)
+	}
 }
 
 // InvokeAction publishes the action request

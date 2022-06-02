@@ -3,11 +3,12 @@
 package consumedthing
 
 import (
-	"encoding/json"
 	"errors"
-	"github.com/sirupsen/logrus"
-	"github.com/wostzone/wost-go/pkg/thing"
 	"sync"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/wostzone/wost-go/pkg/thing"
 )
 
 // ConsumedThing is the implementation of an ConsumedThing interface
@@ -93,11 +94,7 @@ func (cThing *ConsumedThing) GetThingDescription() *thing.ThingTD {
 
 // HandleEvent handles incoming events for the consumed thing.
 //
-// If the event name is 'properties' then the payload is a map of property name-value pairs.
-// If the event is a propertyName then the payload is the property value of that event.
-//
-// Otherwise the event payload is described in the TD event affordance.
-// Last invoke the subscriber to the event name, if any, or the default subscriber
+// This updates the cached event value and invokes the subscriber to the event, if any, or the default subscriber
 //  address is the MQTT topic that the event is published on as: things/{thingID}/event/{eventName}
 //  whereas message is the body of the event.
 func (cThing *ConsumedThing) HandleEvent(eventName string, message []byte) {
@@ -105,49 +102,6 @@ func (cThing *ConsumedThing) HandleEvent(eventName string, message []byte) {
 
 	logrus.Infof("Received event '%s' for thing: %s", eventName, cThing.TD.ID)
 
-	// handle property events
-	propAffordance := cThing.TD.GetProperty(eventName)
-	if propAffordance != nil {
-		evData = thing.NewInteractionOutputFromJson(message, &propAffordance.DataSchema)
-
-		logrus.Infof("Event with name %s is a property event; for thing: %s", eventName, cThing.TD.ID)
-		// TODO validate the data
-		// property or event, it is stored in the valueStore
-		cThing._putValue(eventName, evData)
-
-		// notify observer if any
-		subscription, found := cThing.activeObservations[eventName]
-		if found {
-			subscription.Handler(eventName, evData)
-		}
-	} else if eventName == TopicSubjectProperties {
-		// handle map of property name-value pairs
-		var propMap map[string]interface{}
-		err := json.Unmarshal(message, &propMap)
-		if err != nil {
-			logrus.Warningf("Event with name '%s' does not contain name-value map for thing: %s",
-				eventName, cThing.TD.ID)
-			return
-		}
-		for propName, propValue := range propMap {
-			propAffordance = cThing.TD.GetProperty(propName)
-			if propAffordance != nil {
-				evData = thing.NewInteractionOutput(propValue, &propAffordance.DataSchema)
-				// property or event, it is stored in the valueStore
-				cThing._putValue(propName, evData)
-
-				// notify observer if any
-				subscription, found := cThing.activeObservations[propName]
-				if found {
-					subscription.Handler(propName, evData)
-				}
-			} else {
-				logrus.Infof("Ignoring unknown property '%s' for thing: %s",
-					propName, cThing.TD.ID)
-			}
-		}
-	}
-	// handle actual events
 	eventAffordance := cThing.TD.GetEvent(eventName)
 	if eventAffordance != nil {
 		evData = thing.NewInteractionOutputFromJson(message, &eventAffordance.Data)
@@ -155,9 +109,68 @@ func (cThing *ConsumedThing) HandleEvent(eventName string, message []byte) {
 		cThing._putValue(eventName, evData)
 
 		// notify subscriber if any
+		cThing.subscriptionMutex.Lock()
 		subscription, found := cThing.activeSubscriptions[eventName]
+		cThing.subscriptionMutex.Unlock()
 		if found {
 			subscription.Handler(eventName, evData)
+		}
+	}
+}
+
+// HandlePropertyChange handles change of consumed thing property value.
+//
+// This updates the cached property value and notifies the property observer, if any.
+//
+//  address is the MQTT topic that the event is published on as: things/{thingID}/event/{eventName}
+//  whereas message is the body of the event.
+func (cThing *ConsumedThing) HandlePropertyChange(propName string, message []byte) {
+	var evData *thing.InteractionOutput
+
+	logrus.Infof("Received property '%s' for thing: %s", propName, cThing.TD.ID)
+
+	// TBD: support for multiple properties
+	//if propName == TopicSubjectProperties {
+	//	// handle map of property name-value pairs
+	//	var propMap map[string]interface{}
+	//	err := json.Unmarshal(message, &propMap)
+	//	if err != nil {
+	//		logrus.Warningf("Event with name '%s' does not contain name-value map for thing: %s",
+	//			propName, cThing.TD.ID)
+	//		return
+	//	}
+	//	for propName, propValue := range propMap {
+	//		propAffordance := cThing.TD.GetProperty(propName)
+	//		if propAffordance != nil {
+	//			propData := thing.NewInteractionOutput(propValue, &propAffordance.DataSchema)
+	//			// property or event, it is stored in the valueStore
+	//			cThing._putValue(propName, propData)
+	//
+	//			// notify observer if any
+	//			subscription, found := cThing.activeObservations[propName]
+	//			if found {
+	//				subscription.Handler(propName, evData)
+	//			}
+	//		} else {
+	//			logrus.Infof("Ignoring unknown property '%s' for thing: %s",
+	//				propName, cThing.TD.ID)
+	//		}
+	//	}
+	//}
+	propAffordance := cThing.TD.GetProperty(propName)
+	if propAffordance != nil {
+		evData = thing.NewInteractionOutputFromJson(message, &propAffordance.DataSchema)
+		// TODO validate the data
+		// property or event, it is stored in the valueStore
+		cThing._putValue(propName, evData)
+
+		// notify observer if any
+		cThing.subscriptionMutex.Lock()
+		subscription, found := cThing.activeObservations[propName]
+		cThing.subscriptionMutex.Unlock()
+
+		if found {
+			subscription.Handler(propName, evData)
 		}
 	}
 }
@@ -190,8 +203,11 @@ func (cThing *ConsumedThing) InvokeAction(actionName string, data interface{}) e
 //
 // returns an error if an active observation already exists
 func (cThing *ConsumedThing) ObserveProperty(
-	name string, handler func(name string, data *thing.InteractionOutput)) error {
+	name string, listener func(name string, data *thing.InteractionOutput)) error {
 	var err error = nil
+
+	cThing.subscriptionMutex.Lock()
+	defer cThing.subscriptionMutex.Unlock()
 
 	// Only a single subscriber is allowed
 	_, found := cThing.activeObservations[name]
@@ -199,11 +215,15 @@ func (cThing *ConsumedThing) ObserveProperty(
 		logrus.Errorf("A property subscription for '%s' already exists", name)
 		return errors.New("NotAllowed")
 	}
+	if listener == nil {
+		logrus.Errorf("Nil listener for property '%s'", name)
+		return errors.New("TypeError")
+	}
 
 	sub := Subscription{
 		SubType: SubscriptionTypeProperty,
 		Name:    name,
-		Handler: handler,
+		Handler: listener,
 	}
 	cThing.activeObservations[name] = sub
 	return err

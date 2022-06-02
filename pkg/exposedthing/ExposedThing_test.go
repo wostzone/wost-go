@@ -2,13 +2,15 @@ package exposedthing_test
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wostzone/wost-go/pkg/exposedthing"
 	"github.com/wostzone/wost-go/pkg/thing"
 	"github.com/wostzone/wost-go/pkg/vocab"
-	"testing"
 )
 
 func TestCreateExposedThing(t *testing.T) {
@@ -76,12 +78,13 @@ func TestEmitPropertyChange(t *testing.T) {
 	props := make(map[string]interface{})
 	props[testProp1Name] = testProp1Value
 	eThing := exposedthing.CreateExposedThing(testDeviceID, td)
-	eThing.EmitPropertiesChangeHook = func(props map[string]interface{}) error {
-		rxPropValue = props[testProp1Name].(string)
+	eThing.EmitPropertyChangeHook = func(prop string, data interface{}) error {
+		rxPropValue = data.(string)
 		return nil
 	}
 	// step 2 emit the property
-	eThing.EmitPropertyChange(testProp1Name, testProp1Value)
+	err := eThing.EmitPropertyChange(testProp1Name, testProp1Value, false)
+	assert.NoError(t, err)
 
 	// validate
 	assert.Equal(t, testProp1Value, rxPropValue)

@@ -39,7 +39,7 @@ func SetLogging(levelName string, filename string) {
 		if err2 != nil {
 			logrus.Errorf("SetLogging: Unable to open logfile: %s", err2)
 		} else {
-			logrus.Warnf("SetLogging: Send '%s' logging to '%s'", levelName, filename)
+			logrus.Infof("SetLogging: Send '%s' logging to '%s'", levelName, filename)
 			logOut = io.MultiWriter(logOut, logFileHandle)
 		}
 	}
@@ -55,23 +55,26 @@ func SetLogging(levelName string, filename string) {
 			CallerPrettyfier: func(f *runtime.Frame) (string, string) {
 				funcName := f.Func.Name()
 				// remove classname
-				// names := strings.Split(funcName, ".")
-				// if len(names) > 1 {
-				// 	funcName = names[len(names)-1]
-				// }
+				names := strings.Split(funcName, ".")
+				if len(names) > 1 {
+					funcName = names[len(names)-1]
+				}
 				// levelColor := 37
 				// fileInfo := fmt.Sprintf(" \x1b[%dm%s:%v\x1b[0m", levelColor, path.Base(f.File), f.Line)
 				// funcName = fmt.Sprintf("\x1b[%dm%s\x1b[0m()", levelColor, funcName)
 
 				// remove the path from the function name
 				_, funcName = path.Split(funcName)
+				funcName += "(): "
+				//funcName = fmt.Sprintf("%-30s", funcName)
+
 				fileName := path.Base(f.File)
 				//if len(fileName) > 15 {
 				//	fileName = fileName[:10] + "..."
 				//}
 				fileInfo := fmt.Sprintf(" %s:%v", fileName, f.Line)
-				fileInfo = fmt.Sprintf("%-17s", fileInfo)
-				return "- " + funcName + ": ", fileInfo
+				fileInfo = fmt.Sprintf("%s", fileInfo)
+				return funcName, fileInfo
 			},
 		})
 	logrus.SetOutput(logOut)

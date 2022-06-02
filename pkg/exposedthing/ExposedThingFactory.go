@@ -4,10 +4,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"sync"
+
 	"github.com/sirupsen/logrus"
+
 	"github.com/wostzone/wost-go/pkg/mqttclient"
 	"github.com/wostzone/wost-go/pkg/thing"
-	"sync"
 )
 
 // Factory for managing instances of exposed things
@@ -81,12 +83,13 @@ func (etFactory *ExposedThingFactory) Destroy(eThing *ExposedThing) {
 // Expose creates an exposed thing instance and starts serving external requests for the Thing so that
 // WoT Interactions using Properties and Actions will be possible.
 // This also publishes the TD document of this Thing.
-func (etFactory *ExposedThingFactory) Expose(deviceID string, td *thing.ThingTD) *ExposedThing {
+// Returns the exposed thing with a flag whether an existing thing was returned
+func (etFactory *ExposedThingFactory) Expose(deviceID string, td *thing.ThingTD) (eThing *ExposedThing, found bool) {
 	logrus.Infof("device '%s'; ID: %s", deviceID, td.ID)
 
 	etFactory.etMapMutex.Lock()
 	defer etFactory.etMapMutex.Unlock()
-	eThing, found := etFactory.etMap[td.ID]
+	eThing, found = etFactory.etMap[td.ID]
 
 	if !found {
 		eThing = CreateExposedThing(deviceID, td)
@@ -95,7 +98,7 @@ func (etFactory *ExposedThingFactory) Expose(deviceID string, td *thing.ThingTD)
 		etFactory.etMap[td.ID] = eThing
 		binding.Start()
 	}
-	return eThing
+	return eThing, found
 }
 
 // CreateExposedThingFactory creates a factory instance for exposed things.

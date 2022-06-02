@@ -2,12 +2,13 @@
 package exposedthing
 
 import (
-	"encoding/json"
+	"strings"
+
 	"github.com/sirupsen/logrus"
+
 	"github.com/wostzone/wost-go/pkg/consumedthing"
 	"github.com/wostzone/wost-go/pkg/mqttclient"
 	"github.com/wostzone/wost-go/pkg/thing"
-	"strings"
 )
 
 // ExposedThingMqttBinding that connects the exposed thing to the message bus
@@ -30,6 +31,19 @@ func (binding *ExposedThingMqttBinding) EmitEvent(name string, data interface{})
 	return err
 }
 
+// EmitPropertyChange sends a proerty change event to subscribers
+// The topic will be things/{thingID}/event/{name} and payload will be the new property value.
+// If the property cannot be published, for example it is not defined, an error is returned.
+//
+//  name is the name of the property as described in the property affordances section of the TD
+//  data is the property value as defined in the TD events schema and serialized to json
+// Returns an error if the event is not found or cannot be published
+func (binding *ExposedThingMqttBinding) EmitPropertyChange(name string, data interface{}) error {
+	topic := strings.ReplaceAll(consumedthing.TopicEmitEvent, "{thingID}", binding.td.ID) + "/" + name
+	err := binding.mqttClient.PublishObject(topic, data)
+	return err
+}
+
 // EmitPropertiesChange sends a properties change event for multiple properties
 // and if the property name matches an event name, an event with the property name
 // is sent, if the value changed.
@@ -38,19 +52,19 @@ func (binding *ExposedThingMqttBinding) EmitEvent(name string, data interface{})
 // propMap is a map of property name to raw value. This will be converted to json as-is.
 //
 // Returns an error if submitting an event fails
-func (binding *ExposedThingMqttBinding) EmitPropertiesChange(propMap map[string]interface{}) error {
-	topic := strings.ReplaceAll(
-		consumedthing.TopicEmitPropertiesChange, "{thingID}", binding.td.ID)
-	err := binding.mqttClient.PublishObject(topic, propMap)
-	if err != nil {
-		logrus.Warningf("Failed %s", err)
-		return err
-	}
-	cpAsText, _ := json.Marshal(propMap)
-	logrus.Infof("Submitted %d properties for thing %s: %s",
-		len(propMap), binding.td.ID, cpAsText)
-	return err
-}
+//func (binding *ExposedThingMqttBinding) EmitPropertiesChange(propMap map[string]interface{}) error {
+//	topic := strings.ReplaceAll(
+//		consumedthing.TopicEmitPropertiesChange, "{thingID}", binding.td.ID)
+//	err := binding.mqttClient.PublishObject(topic, propMap)
+//	if err != nil {
+//		logrus.Warningf("Failed %s", err)
+//		return err
+//	}
+//	cpAsText, _ := json.Marshal(propMap)
+//	logrus.Infof("Submitted %d properties for thing %s: %s",
+//		len(propMap), binding.td.ID, cpAsText)
+//	return err
+//}
 
 // Handle action requests for this Thing.
 //
@@ -102,7 +116,8 @@ func CreateExposedThingMqttBinding(eThing *ExposedThing, mqttClient *mqttclient.
 		eThing:     eThing,
 		mqttClient: mqttClient,
 	}
-	eThing.EmitPropertiesChangeHook = binding.EmitPropertiesChange
+	//eThing.EmitPropertiesChangeHook = binding.EmitPropertiesChange
+	eThing.EmitPropertyChangeHook = binding.EmitPropertyChange
 	eThing.EmitEventHook = binding.EmitEvent
 	return binding
 }

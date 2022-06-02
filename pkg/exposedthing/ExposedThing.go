@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/wostzone/wost-go/pkg/thing"
 	"sync"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/wostzone/wost-go/pkg/thing"
 )
 
 // ExposedThing is the implementation of an ExposedThing interface using the MQTT protocol binding.
@@ -75,7 +77,10 @@ type ExposedThing struct {
 	EmitEventHook func(name string, data interface{}) error
 
 	// Protocol binding hook to emit properties changed notification
-	EmitPropertiesChangeHook func(map[string]interface{}) error
+	//EmitPropertiesChangeHook func(map[string]interface{}) error
+
+	// Protocol binding hook to emit a single property change notification
+	EmitPropertyChangeHook func(name string, data interface{}) error
 
 	// handler for action requests
 	// to set the default handler use name ""
@@ -98,23 +103,6 @@ type ExposedThing struct {
 	valueStoreMutex sync.RWMutex
 }
 
-// _getValue reads the latest cached value from the value store
-// This is concurrent safe and should be the only way to access the values.
-func (eThing *ExposedThing) _getValue(key string) (value *thing.InteractionOutput, found bool) {
-	eThing.valueStoreMutex.RLock()
-	defer eThing.valueStoreMutex.RUnlock()
-	value, found = eThing.valueStore[key]
-	return value, found
-}
-
-// _putValue writes the latest value into the value store cache
-// This is concurrent safe and should be the only way to access the values.
-func (eThing *ExposedThing) _putValue(key string, value *thing.InteractionOutput) {
-	eThing.valueStoreMutex.Lock()
-	defer eThing.valueStoreMutex.Unlock()
-	eThing.valueStore[key] = value
-}
-
 // Destroy stops serving external requests
 // this is an internal method for use by the factory
 func (eThing *ExposedThing) Destroy() {
@@ -134,10 +122,10 @@ func (eThing *ExposedThing) EmitEvent(name string, data interface{}) error {
 	var err error
 	_, found := eThing.TD.Events[name]
 	if !found {
-		logrus.Errorf("EmitEvent. Event '%s' not defined for thing '%s'", name, eThing.TD.ID)
+		logrus.Errorf("event '%s' not defined for thing '%s'", name, eThing.TD.ID)
 		err = errors.New("NotFoundError")
 	} else if eThing.EmitEventHook == nil {
-		logrus.Errorf("EmitEvent. EmitEventHook is not installed for thing %s", eThing.TD.ID)
+		logrus.Errorf("EmitEventHook is not installed for thing %s", eThing.TD.ID)
 		err = errors.New("EmitEventHook not installed error")
 	} else {
 		err = eThing.EmitEventHook(name, data)
@@ -145,24 +133,47 @@ func (eThing *ExposedThing) EmitEvent(name string, data interface{}) error {
 	return err
 }
 
-// EmitPropertyChange publishes a property value change event, which in turn will notify all
-// observers (subscribers) of the change.
+// EmitPropertyChange emits a property value change event
+//
+// This in turn will notify all observers (subscribers) of the change.
+// The new value will be updated in the value store.
 // TODO: validate property exists
 //
-// propName is the name of the property in the TD.
-// newRawValue is the new raw value of the property. This will be also be stored in the valueStore.
+//  propName is the name of the property in the TD
+//  newRawValue is the new raw value of the property which will also be stored in the valueStore.
+//  changesOnly emit the property change only if the property value has changed.
 // Returns an error if the property value cannot be published
-func (eThing *ExposedThing) EmitPropertyChange(propName string, newRawValue interface{}) error {
-	schema := eThing.TD.GetProperty(propName)
-	if schema == nil {
+func (eThing *ExposedThing) EmitPropertyChange(
+	propName string, newRawValue interface{}, changesOnly bool) error {
+
+	affordance := eThing.TD.GetProperty(propName)
+	if affordance == nil {
 		msg := fmt.Sprintf("Property '%s' does not exist on Thing '%s'", propName, eThing.TD.ID)
 		err := errors.New(msg)
 		logrus.Error(err)
 		return err
 	}
+	// log up to 25 chars
+	//newValueString := fmt.Sprintf("%.25s", newRawValue)
+	//logrus.Infof("Property %s.%s: %s", eThing.TD.ID, propName, newValueString)
 
-	propMap := map[string]interface{}{propName: newRawValue}
-	return eThing.EmitPropertiesChange(propMap, false)
+	if changesOnly {
+		io, found := eThing.GetValue(propName)
+		if found && io.Value == newRawValue {
+			return nil
+		}
+	}
+	io := thing.NewInteractionOutput(newRawValue, &affordance.DataSchema)
+	eThing.valueStoreMutex.Lock()
+	eThing.valueStore[propName] = io
+	eThing.valueStoreMutex.Unlock()
+
+	if eThing.EmitPropertyChangeHook == nil {
+		logrus.Errorf("EmitPropertyChangeHook is not installed for thing %s", eThing.TD.ID)
+		err := errors.New("EmitPropertyChangeHook not installed error")
+		return err
+	}
+	return eThing.EmitPropertyChangeHook(propName, newRawValue)
 }
 
 // EmitPropertiesChange sends a properties change event for multiple properties
@@ -175,52 +186,62 @@ func (eThing *ExposedThing) EmitPropertyChange(propName string, newRawValue inte
 //
 // @param onlyChanges: include only those properties whose value have changed (recommended)
 // Returns an error if submitting an event fails
-func (eThing *ExposedThing) EmitPropertiesChange(
-	propMap map[string]interface{}, onlyChanges bool) error {
-
-	logrus.Infof("%s", propMap)
-	var err error
-	changedProps := make(map[string]interface{})
-
-	// filter properties that have no affordance or haven't changed
-	for propName, newVal := range propMap {
-		lastVal, found := eThing._getValue(propName)
-
-		// In order to be included as a property it must have a propertyAffordance
-		if !found || !onlyChanges || lastVal.Value != newVal {
-			propAffordance, found := eThing.TD.Properties[propName]
-			// only include values that are in the properties map
-			if found {
-				changedProps[propName] = newVal
-				newIO := thing.NewInteractionOutput(newVal, &propAffordance.DataSchema)
-				eThing._putValue(propName, newIO)
-			}
-			//
-			//// to be sent as an event it must have an event affordance
-			//eventAffordance, found := eThing.TD.Events[propName]
-			//if found {
-			//	_ = eventAffordance
-			//	topic := strings.ReplaceAll(TopicEmitEvent, "{thingID}", eThing.TD.ID)
-			//	topic += "/" + propName
-			//	err = eThing.mqttClient.PublishObject(topic, newVal)
-			//	if err != nil {
-			//		logrus.Warningf("MqqExposedThing.EmitPropertyChanges: Failed %s", err)
-			//		return err
-			//	}
-			//}
-		}
-	}
-	// only publish if there are properties left
-	if len(changedProps) > 0 {
-		err = eThing.EmitPropertiesChangeHook(changedProps)
-	}
-	return err
-}
+//func (eThing *ExposedThing) EmitPropertiesChange(
+//	propMap map[string]interface{}, onlyChanges bool) error {
+//
+//	logrus.Infof("%s", propMap)
+//	var err error
+//	changedProps := make(map[string]interface{})
+//
+//	// filter properties that have no affordance or haven't changed
+//	for propName, newVal := range propMap {
+//		lastVal, found := eThing.GetValue(propName)
+//
+//		// In order to be included as a property it must have a propertyAffordance
+//		if !found || !onlyChanges || lastVal.Value != newVal {
+//			propAffordance, found := eThing.TD.Properties[propName]
+//			// only include values that are in the properties map
+//			if found {
+//				changedProps[propName] = newVal
+//				newIO := thing.NewInteractionOutput(newVal, &propAffordance.DataSchema)
+//				eThing._putValue(propName, newIO)
+//			}
+//			//
+//			//// to be sent as an event it must have an event affordance
+//			//eventAffordance, found := eThing.TD.Events[propName]
+//			//if found {
+//			//	_ = eventAffordance
+//			//	topic := strings.ReplaceAll(TopicEmitEvent, "{thingID}", eThing.TD.ID)
+//			//	topic += "/" + propName
+//			//	err = eThing.mqttClient.PublishObject(topic, newVal)
+//			//	if err != nil {
+//			//		logrus.Warningf("MqqExposedThing.EmitPropertyChanges: Failed %s", err)
+//			//		return err
+//			//	}
+//			//}
+//		}
+//	}
+//	// only publish if there are properties left
+//	if len(changedProps) > 0 {
+//		err = eThing.EmitPropertiesChangeHook(changedProps)
+//	}
+//	return err
+//}
 
 // GetThingDescription returns the TD document of this exposed Thing
 // This returns the cached version of the TD
 func (eThing *ExposedThing) GetThingDescription() *thing.ThingTD {
 	return eThing.TD
+}
+
+// GetValue reads the latest cached property value from the value store
+// This is concurrent safe and should be the only way to access the values.
+// Returns the InteractionOutput or nill if not found
+func (eThing *ExposedThing) GetValue(key string) (value *thing.InteractionOutput, found bool) {
+	eThing.valueStoreMutex.RLock()
+	defer eThing.valueStoreMutex.RUnlock()
+	value, found = eThing.valueStore[key]
+	return value, found
 }
 
 // Expose starts serving external requests for the Thing so that WoT Interactions using Properties and Actions

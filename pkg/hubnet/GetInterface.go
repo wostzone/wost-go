@@ -27,7 +27,7 @@ func GetInterfaces(address string) ([]net.Interface, error) {
 				switch v := a.(type) {
 				case *net.IPAddr:
 					result = append(result, iface)
-					logrus.Infof("GetInterfaces: Found: Interface%s", v.String())
+					logrus.Infof("Found: Interface%s", v.String())
 
 				case *net.IPNet:
 					ifNet := a.(*net.IPNet)
@@ -36,7 +36,7 @@ func GetInterfaces(address string) ([]net.Interface, error) {
 					// ignore loopback interface
 					if hasIP && !a.(*net.IPNet).IP.IsLoopback() {
 						result = append(result, iface)
-						logrus.Infof("GetInterfaces: Found network %v : %s [%v/%v]\n", iface.Name, v, v.IP, v.Mask)
+						logrus.Infof("Found network %v : %s [%v/%v]\n", iface.Name, v, v.IP, v.Mask)
 					}
 				}
 			}
@@ -56,7 +56,7 @@ func GetOutboundInterface(address string) (interfaceName string, macAddress stri
 	// This dial command doesn't actually create a connection
 	conn, err := net.Dial("udp", address+":9999")
 	if err != nil {
-		logrus.Errorf("GetOutboundInterface for address '%s': %s", address, err)
+		logrus.Errorf("address '%s': %s", address, err)
 		return "", "", nil
 	}
 	defer conn.Close()
@@ -74,7 +74,7 @@ func GetOutboundInterface(address string) (interfaceName string, macAddress stri
 
 				// only interested in the name with current IP address
 				if strings.Contains(addr.String(), ipAddr.String()) {
-					logrus.Debug("GetOutboundInterface: Use name : ", interf.Name)
+					logrus.Debug("use name : ", interf.Name)
 					interfaceName = interf.Name
 					macAddress = fmt.Sprint(interf.HardwareAddr)
 					break
