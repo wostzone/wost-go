@@ -2,10 +2,12 @@ package thing
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
 	"github.com/wostzone/wost-go/pkg/vocab"
-	"testing"
 )
 
 func TestNilSchema(t *testing.T) {
@@ -31,6 +33,10 @@ func TestBool(t *testing.T) {
 	io := NewInteractionOutput(data1, nil)
 	asBool := io.ValueAsBoolean()
 	assert.Equal(t, true, asBool)
+	asString := io.ValueAsString()
+	assert.Equal(t, "true", asString)
+	asInt := io.ValueAsInt()
+	assert.Equal(t, 1, asInt)
 }
 
 func TestInt(t *testing.T) {
@@ -38,6 +44,15 @@ func TestInt(t *testing.T) {
 	io := NewInteractionOutput(data1, nil)
 	asInt := io.ValueAsInt()
 	assert.Equal(t, 42, asInt)
+	asString := io.ValueAsString()
+	assert.Equal(t, "42", asString)
+}
+
+func TestString(t *testing.T) {
+	data1 := "Hello world"
+	io := NewInteractionOutput(data1, nil)
+	asString := io.ValueAsString()
+	assert.Equal(t, data1, asString)
 }
 
 func TestObject(t *testing.T) {

@@ -18,16 +18,16 @@ const TopicTypeAction = "action"
 const TopicInvokeAction = "things/{thingID}/" + TopicTypeAction
 
 // TopicSubjectProperties base topic for publishing a map of property values updates
-const TopicSubjectProperties = "properties"
+//const TopicSubjectProperties = "properties"
 
 // TopicEmitPropertiesChange base topic for publishing property value updates
-const TopicEmitPropertiesChange = "things/{thingID}/" + TopicTypeEvent + "/" + TopicSubjectProperties
+//const TopicEmitPropertiesChange = "things/{thingID}/" + TopicTypeEvent + "/" + TopicSubjectProperties
 
 // TopicReadProperties topic to submit request to receive a property event with property values
-const (
-	TopicTypeRead       = "read"
-	TopicReadProperties = "things/{thingID}/" + TopicTypeRead + "/" + TopicSubjectProperties
-)
+//const (
+//	TopicTypeRead       = "read"
+//	TopicReadProperties = "things/{thingID}/" + TopicTypeRead + "/" + TopicSubjectProperties
+//)
 
 // TopicProvisionRequest topic requesting to provision of a thing device
 // const TopicProvisionRequest = "provisioning" + "/{thingID}/request"

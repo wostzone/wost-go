@@ -11,7 +11,6 @@ import (
 
 	"github.com/wostzone/wost-go/pkg/consumedthing"
 	"github.com/wostzone/wost-go/pkg/thing"
-	"github.com/wostzone/wost-go/pkg/vocab"
 )
 
 func TestCreateConsumedThing(t *testing.T) {
@@ -122,66 +121,6 @@ func TestObserveProperty(t *testing.T) {
 	cThing.Stop()
 }
 
-// test with handling multiple properties
-//func TestObserveProperties(t *testing.T) {
-//	logrus.Infof("--- TestObserveProperties ---")
-//	const testProp2Name = "prop2"
-//	const value2 = "value2"
-//	var counter int32 = 0
-//
-//	// step 1 setup
-//	td := createTestTD()
-//	td.AddProperty(testProp2Name, "test prop", vocab.WoTDataTypeString)
-//	cThing := consumedthing.CreateConsumedThing(td)
-//
-//	err := cThing.ObserveProperty(testProp1Name,
-//		func(name string, data *thing.InteractionOutput) {
-//			assert.Equal(t, testProp1Name, name)
-//			atomic.AddInt32(&counter, 1)
-//		})
-//	assert.NoError(t, err)
-//
-//	// step 2 create multiple properties
-//	props := make(map[string]interface{})
-//	props[testProp1Name] = testProp1Value
-//	props[testProp2Name] = value2
-//	jsonValue, _ := json.Marshal(props)
-//	cThing.HandlePropertyChange(consumedthing.TopicSubjectProperties, jsonValue)
-//
-//	// step 3 both should to be received
-//	assert.Equal(t, int32(1), counter)
-//	io2, err := cThing.ReadProperty(testProp2Name)
-//	assert.NoError(t, err)
-//	assert.Equal(t, value2, io2.ValueAsString())
-//
-//	// step 4 cleanup
-//	cThing.Stop()
-//}
-
-// test with handling property that isn't a map
-func TestObservePropertyNotAMap(t *testing.T) {
-	logrus.Infof("--- TestObservePropertyNotAMap ---")
-	const testProp2Name = "prop2"
-	const value2 = "value2"
-	var counter int32 = 0
-
-	// step 1 setup
-	td := createTestTD()
-	td.AddProperty(testProp2Name, "test prop", vocab.WoTDataTypeString)
-	cThing := consumedthing.CreateConsumedThing(td)
-
-	err := cThing.ObserveProperty(testProp1Name,
-		func(name string, data *thing.InteractionOutput) {
-			assert.Equal(t, testProp1Name, name)
-			atomic.AddInt32(&counter, 1)
-		})
-	assert.NoError(t, err)
-
-	jsonValue, _ := json.Marshal(value2)
-	cThing.HandleEvent(consumedthing.TopicSubjectProperties, jsonValue)
-	assert.Equal(t, int32(0), counter)
-}
-
 // test with handling property that isn't in the TD
 func TestObservePropertyNotInTD(t *testing.T) {
 	logrus.Infof("--- TestObservePropertyNotInTD ---")
@@ -198,10 +137,8 @@ func TestObservePropertyNotInTD(t *testing.T) {
 		})
 	assert.NoError(t, err)
 
-	props := make(map[string]interface{})
-	props[testProp3Name] = value3
-	jsonValue, _ := json.Marshal(props)
-	cThing.HandleEvent(consumedthing.TopicSubjectProperties, jsonValue)
+	jsonValue, _ := json.Marshal(value3)
+	cThing.HandleEvent(testProp3Name, jsonValue)
 }
 
 func TestObservePropertyTwiceShouldFail(t *testing.T) {

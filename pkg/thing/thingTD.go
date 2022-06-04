@@ -2,9 +2,10 @@ package thing
 
 import (
 	"encoding/json"
-	"github.com/wostzone/wost-go/pkg/vocab"
 	"sync"
 	"time"
+
+	"github.com/wostzone/wost-go/pkg/vocab"
 )
 
 // ThingTD contains the Thing Description document
@@ -82,7 +83,7 @@ type ThingTD struct {
 	updateMutex sync.RWMutex
 }
 
-// AddAction provides a simple way to add an action affordance schema to the TD
+// AddAction provides a simple way to add an action affordance Schema to the TD
 // This returns the action affordance that can be augmented/modified directly
 //
 // name is the name under which it is stored in the action affordance map. Any existing name will be replaced.
@@ -158,7 +159,7 @@ func (tdoc *ThingTD) AsMap() map[string]interface{} {
 // Most popular; https://github.com/xeipuuv/gojsonschema
 // Other:  https://github.com/piprate/json-gold
 
-// GetAction returns the action affordance with schema for the action.
+// GetAction returns the action affordance with Schema for the action.
 // Returns nil if name is not an action or no affordance is defined.
 func (tdoc *ThingTD) GetAction(name string) *ActionAffordance {
 	tdoc.updateMutex.RLock()
@@ -171,7 +172,7 @@ func (tdoc *ThingTD) GetAction(name string) *ActionAffordance {
 	return actionAffordance
 }
 
-// GetEvent returns the schema for the event or nil if the event doesn't exist
+// GetEvent returns the Schema for the event or nil if the event doesn't exist
 func (tdoc *ThingTD) GetEvent(name string) *EventAffordance {
 	tdoc.updateMutex.RLock()
 	defer tdoc.updateMutex.RUnlock()
@@ -183,7 +184,7 @@ func (tdoc *ThingTD) GetEvent(name string) *EventAffordance {
 	return eventAffordance
 }
 
-// GetProperty returns the schema and value for the property or nil if name is not a property
+// GetProperty returns the Schema and value for the property or nil if name is not a property
 func (tdoc *ThingTD) GetProperty(name string) *PropertyAffordance {
 	tdoc.updateMutex.RLock()
 	defer tdoc.updateMutex.RUnlock()
@@ -199,7 +200,7 @@ func (tdoc *ThingTD) GetID() string {
 	return tdoc.ID
 }
 
-// UpdateAction adds a new or replaces an existing action affordance (schema) of name. Intended for creating TDs
+// UpdateAction adds a new or replaces an existing action affordance (Schema) of name. Intended for creating TDs
 // Use UpdateProperty if name is a property name.
 // Returns the added affordance to support chaining
 func (tdoc *ThingTD) UpdateAction(name string, affordance *ActionAffordance) *ActionAffordance {
@@ -209,7 +210,7 @@ func (tdoc *ThingTD) UpdateAction(name string, affordance *ActionAffordance) *Ac
 	return affordance
 }
 
-// UpdateEvent adds a new or replaces an existing event affordance (schema) of name. Intended for creating TDs
+// UpdateEvent adds a new or replaces an existing event affordance (Schema) of name. Intended for creating TDs
 // Returns the added affordance to support chaining
 func (tdoc *ThingTD) UpdateEvent(name string, affordance *EventAffordance) *EventAffordance {
 	tdoc.updateMutex.Lock()
@@ -293,7 +294,7 @@ func CreateTD(thingID string, title string, deviceType vocab.DeviceType) *ThingT
 		updateMutex: sync.RWMutex{},
 	}
 
-	// TODO @type is a JSON-LD keyword to label using semantic tags, eg it needs a schema
+	// TODO @type is a JSON-LD keyword to label using semantic tags, eg it needs a Schema
 	if deviceType != "" {
 		// deviceType must be a string for serialization and querying
 		td.AtType = string(deviceType)

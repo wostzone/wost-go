@@ -1,4 +1,4 @@
-// Package thing with schema type definitions for the ExposedThing and ConsumedThing classes
+// Package thing with Schema type definitions for the ExposedThing and ConsumedThing classes
 // as described here: https://www.w3.org/TR/wot-thing-description/#sec-data-schema-vocabulary-definition
 package thing
 
@@ -24,9 +24,9 @@ type DataSchema struct {
 	Description string `json:"description,omitempty"`
 	// Provides additional nulti-language information
 	Descriptions []string `json:"descriptions,omitempty"`
-	// Provides a constant value of any type as per data schema
+	// Provides a constant value of any type as per data Schema
 	Const interface{} `json:"const,omitempty"`
-	// Provides a default value of any type as per data schema
+	// Provides a default value of any type as per data Schema
 	Default interface{} `json:"default,omitempty"`
 	// Unit as used in international science, engineering, and business.
 	// See vocab UnitNameXyz for units in the WoST vocabulary

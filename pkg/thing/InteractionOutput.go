@@ -3,18 +3,21 @@ package thing
 
 import (
 	"encoding/json"
+	"fmt"
+
 	"github.com/sirupsen/logrus"
+
 	"github.com/wostzone/wost-go/pkg/vocab"
 )
 
 // InteractionOutput to expose the data returned from WoT Interactions to applications.
 // Use NewInteractionOutput to initialize
 type InteractionOutput struct {
-	// schema describing the data from property, event or action affordance
-	schema *DataSchema
+	// Schema describing the data from property, event or action affordance
+	Schema *DataSchema
 	// raw data from the interaction as described by the Schema
 	jsonEncoded []byte
-	// decoded data in their native format, eg string, int, array, object
+	// decoded data in its native format, eg string, int, array, object
 	Value interface{} `json:"value"`
 }
 
@@ -24,8 +27,8 @@ type InteractionOutput struct {
 //}
 
 // ValueAsArray returns the value as an array
-// The result depends on the schema type
-//  array: returns array of values as describe ni the schema
+// The result depends on the Schema type
+//  array: returns array of values as describe ni the Schema
 //  boolean: returns a single element true/false
 //  bytes: return an array of bytes
 //  int: returns a single element with integer
@@ -39,12 +42,15 @@ func (io *InteractionOutput) ValueAsArray() []interface{} {
 
 // ValueAsString returns the value as a string
 func (io *InteractionOutput) ValueAsString() string {
-	s := ""
-	err := json.Unmarshal(io.jsonEncoded, &s)
-	if err != nil {
-		logrus.Errorf("ValueAsString: Can't convert value '%s' to a string", io.Value)
+	var s interface{} = io.Value //"" //string(io.jsonEncoded)
+	if io.jsonEncoded != nil {
+		err := json.Unmarshal(io.jsonEncoded, &s)
+		if err != nil {
+			logrus.Errorf("Can't convert value '%s' to a string", io.jsonEncoded)
+		}
 	}
-	return s
+	asString := fmt.Sprint(s)
+	return asString
 }
 
 // ValueAsBoolean returns the value as a boolean
@@ -52,7 +58,7 @@ func (io *InteractionOutput) ValueAsBoolean() bool {
 	b := false
 	err := json.Unmarshal(io.jsonEncoded, &b)
 	if err != nil {
-		logrus.Errorf("ValueAsBoolean: Can't convert value '%s' to a boolean", io.Value)
+		logrus.Errorf("Can't convert value '%s' to a boolean", io.jsonEncoded)
 	}
 	return b
 }
@@ -60,9 +66,16 @@ func (io *InteractionOutput) ValueAsBoolean() bool {
 // ValueAsInt returns the value as an integer
 func (io *InteractionOutput) ValueAsInt() int {
 	i := 0
-	err := json.Unmarshal(io.jsonEncoded, &i)
-	if err != nil {
-		logrus.Errorf("ValueAsInt: Can't convert value '%s' to a int", io.Value)
+	// special case converting booleans
+	if io.Value == "true" || io.Value == true {
+		i = 1
+	} else if io.Value == "false" || io.Value == false {
+		i = 0
+	} else {
+		err := json.Unmarshal(io.jsonEncoded, &i)
+		if err != nil {
+			logrus.Errorf("Can't convert value '%s' to a int", io.jsonEncoded)
+		}
 	}
 	return i
 }
@@ -73,14 +86,14 @@ func (io *InteractionOutput) ValueAsMap() map[string]interface{} {
 	o := make(map[string]interface{})
 	err := json.Unmarshal(io.jsonEncoded, &o)
 	if err != nil {
-		logrus.Errorf("ValueAsMap: Can't convert value '%s' to a map", io.Value)
+		logrus.Errorf("Can't convert value '%s' to a map", io.jsonEncoded)
 	}
 	return o
 }
 
 // NewInteractionOutputFromJson creates a new interaction output for reading output data
-// @param jsonEncoded is raw data that will be json parsed using the given schema
-// @param schema describes the value. nil in case of unknown schema
+// @param jsonEncoded is raw data that will be json parsed using the given Schema
+// @param Schema describes the value. nil in case of unknown Schema
 func NewInteractionOutputFromJson(jsonEncoded []byte, schema *DataSchema) *InteractionOutput {
 	var err error
 	var val interface{}
@@ -99,27 +112,27 @@ func NewInteractionOutputFromJson(jsonEncoded []byte, schema *DataSchema) *Inter
 		}
 	}
 	if err != nil {
-		logrus.Errorf("NewInteractionOutputFromJson. Error unmarshalling data: '%s'", err)
+		logrus.Errorf("Error unmarshalling data: '%s'", err)
 	}
 	io := &InteractionOutput{
 		jsonEncoded: jsonEncoded,
-		schema:      schema,
+		Schema:      schema,
 		Value:       val,
 	}
 	return io
 }
 
 // NewInteractionOutput creates a new interaction output from object data
-// data is native that will be json encoded using the given schema
-// schema describes the value. nil in case of unknown schema
+// data is native that will be json encoded using the given Schema
+// Schema describes the value. nil in case of unknown Schema
 func NewInteractionOutput(data interface{}, schema *DataSchema) *InteractionOutput {
 	jsonEncoded, err := json.Marshal(data)
 	if err != nil {
-		logrus.Errorf("NewInteractionOutput. Unable to marshal data: '%s'", data)
+		logrus.Errorf("Unable to marshal data: '%s'", data)
 	}
 	io := &InteractionOutput{
 		jsonEncoded: jsonEncoded,
-		schema:      schema,
+		Schema:      schema,
 		Value:       data,
 	}
 	return io

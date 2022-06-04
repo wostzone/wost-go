@@ -6,10 +6,10 @@ package thing
 type ActionAffordance struct {
 	InteractionAffordance
 
-	// Define the input data schema of the action
+	// Define the input data Schema of the action
 	Input DataSchema `json:"input,omitempty"`
 
-	// Defines the output data schema of the action
+	// Defines the output data Schema of the action
 	Output DataSchema `json:"output,omitempty"`
 
 	// Signals if the Action is state safe (=true) or not

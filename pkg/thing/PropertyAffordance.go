@@ -5,7 +5,7 @@ package thing
 // This is a Subclass of the InteractionAffordance Class and the DataSchema Class.
 // Note: https://github.com/w3c/wot-thing-description/issues/1390
 // The spec simply cannot be implemented in golang without dynamic types.
-// PropertyAffordance must be able to have a schema based on the type, not just DataSchema, as
+// PropertyAffordance must be able to have a Schema based on the type, not just DataSchema, as
 // a property can be of any of the types integer, boolean, object, array, number...
 type PropertyAffordance struct {
 	DataSchema

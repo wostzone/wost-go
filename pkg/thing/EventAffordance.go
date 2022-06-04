@@ -6,7 +6,7 @@ package thing
 type EventAffordance struct {
 	InteractionAffordance
 
-	// Data schema of the event instance message, eg the event payload
+	// Data Schema of the event instance message, eg the event payload
 	Data DataSchema `json:"data,omitempty"`
 
 	// subscription is not applicable
