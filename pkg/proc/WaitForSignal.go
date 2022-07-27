@@ -1,4 +1,4 @@
-// Package waitforsignal with functions to assist plugins
+// Package proc with functions to assist plugins
 package proc
 
 import (

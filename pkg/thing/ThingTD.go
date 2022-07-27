@@ -5,81 +5,14 @@ import (
 	"sync"
 	"time"
 
+	grpcthing "github.com/wostzone/wost.grpc/go/thing"
+
 	"github.com/wostzone/wost-go/pkg/vocab"
 )
 
-// ThingTD contains the Thing Description document
-// Its structure is:
-// {
-//      @context: "http://www.w3.org/ns/td",
-//      @type: <deviceType>,
-//      id: <thingID>,
-//      title: <human description>,  (why is this not a property?)
-//      modified: <iso8601>,
-//      actions: {name: ActionAffordance, ...},
-//      events:  {name: EventAffordance, ...},
-//      properties: {name: PropertyAffordance, ...}
-// }
-//
+// ThingTD wraps the grpc Thing message struct and adds method to simplify creating TDs
 type ThingTD struct {
-	// JSON-LD keyword to define short-hand names called terms that are used throughout a TD document. Required.
-	AtContext []string `json:"@context"`
-
-	// JSON-LD keyword to label the object with semantic tags (or types).
-	AtType  string `json:"@type,omitempty"`
-	AtTypes string `json:"@types,omitempty"`
-
-	// base: Define the base URI that is used for all relative URI references throughout a TD document.
-	Base string `json:"base,omitempty"`
-
-	// ISO8601 timestamp this document was first created
-	Created string `json:"created,omitempty"`
-	// ISO8601 timestamp this document was last modified
-	Modified string `json:"modified,omitempty"`
-
-	// Provides additional (human-readable) information based on a default language
-	Description string `json:"description,omitempty"`
-	// Provides additional nulti-language information
-	Descriptions []string `json:"descriptions,omitempty"`
-
-	// Version information of the TD document (?not the device??)
-	//Version VersionInfo `json:"version,omitempty"` // todo
-
-	// Identifier of the Thing in form of a URI (RFC3986)
-	// Optional in WoT but required in WoST in order to reach the device or service
-	ID string `json:"id"`
-
-	// Information about the TD maintainer as URI scheme (e.g., mailto [RFC6068], tel [RFC3966], https).
-	Support string `json:"support,omitempty"`
-
-	// Human-readable title in the default language. Required.
-	Title string `json:"title"`
-	// Human-readable titles in the different languages
-	Titles map[string]string `json:"titles,omitempty"`
-
-	// All properties-based interaction affordances of the thing
-	Properties map[string]*PropertyAffordance `json:"properties,omitempty"`
-	// All action-based interaction affordances of the thing
-	Actions map[string]*ActionAffordance `json:"actions,omitempty"`
-	// All event-based interaction affordances of the thing
-	Events map[string]*EventAffordance `json:"events,omitempty"`
-
-	// links: todo
-
-	// Form hypermedia controls to describe how an operation can be performed. Forms are serializations of
-	// Protocol Bindings. Thing-level forms are used to describe endpoints for a group of interaction affordances.
-	Forms []Form `json:"forms,omitempty"`
-
-	// Set of security definition names, chosen from those defined in securityDefinitions
-	// In WoST security is handled by the Hub. WoST Things will use the NoSecurityScheme type
-	Security string `json:"security"`
-	// Set of named security configurations (definitions only).
-	// Not actually applied unless names are used in a security name-value pair. (why is this mandatory then?)
-	SecurityDefinitions map[string]string `json:"securityDefinitions,omitempty"`
-
-	// profile: todo
-	// schemaDefinitions: todo
-	// uriVariables: todo
+	grpcthing.ThingDescription
 	updateMutex sync.RWMutex
 }
 
@@ -89,12 +22,10 @@ type ThingTD struct {
 // name is the name under which it is stored in the action affordance map. Any existing name will be replaced.
 // title is the title used in the action. It is okay to use name if not sure.
 // dataType is the type of data the action holds, WoTDataTypeNumber, ..Object, ..Array, ..String, ..Integer, ..Boolean or null
-func (tdoc *ThingTD) AddAction(name string, title string, dataType string) *ActionAffordance {
-	actionAff := &ActionAffordance{
-		InteractionAffordance: InteractionAffordance{
-			Title: title,
-		},
-		Input: DataSchema{
+func (tdoc *ThingTD) AddAction(name string, title string, dataType string) *grpcthing.ActionAffordance {
+	actionAff := &grpcthing.ActionAffordance{
+		Title: title,
+		Input: &grpcthing.DataSchema{
 			Title:    title,
 			Type:     dataType,
 			ReadOnly: true,
@@ -111,13 +42,11 @@ func (tdoc *ThingTD) AddAction(name string, title string, dataType string) *Acti
 // name is the name under which it is stored in the property affordance map. Any existing name will be replaced.
 // title is the title used in the property. It is okay to use name if not sure.
 // dataType is the type of data the property holds, WoTDataTypeNumber, ..Object, ..Array, ..String, ..Integer, ..Boolean or null
-func (tdoc *ThingTD) AddProperty(name string, title string, dataType string) *PropertyAffordance {
-	prop := &PropertyAffordance{
-		DataSchema: DataSchema{
-			Title:    title,
-			Type:     dataType,
-			ReadOnly: true,
-		},
+func (tdoc *ThingTD) AddProperty(name string, title string, dataType string) *grpcthing.PropertyAffordance {
+	prop := &grpcthing.PropertyAffordance{
+		Title:    title,
+		Type:     dataType,
+		ReadOnly: true,
 	}
 	tdoc.UpdateProperty(name, prop)
 	return prop
@@ -129,12 +58,10 @@ func (tdoc *ThingTD) AddProperty(name string, title string, dataType string) *Pr
 // name is the name under which it is stored in the property affordance map. Any existing name will be replaced.
 // title is the title used in the event. It is okay to use name if not sure.
 // dataType is the type of data the event holds, WoTDataTypeNumber, ..Object, ..Array, ..String, ..Integer, ..Boolean or null
-func (tdoc *ThingTD) AddEvent(name string, title string, dataType string) *EventAffordance {
-	evAff := &EventAffordance{
-		InteractionAffordance: InteractionAffordance{
-			Title: title,
-		},
-		Data: DataSchema{
+func (tdoc *ThingTD) AddEvent(name string, title string, dataType string) *grpcthing.EventAffordance {
+	evAff := &grpcthing.EventAffordance{
+		Title: title,
+		Data: &grpcthing.DataSchema{
 			Title:    title,
 			Type:     dataType,
 			ReadOnly: true,
@@ -161,7 +88,7 @@ func (tdoc *ThingTD) AsMap() map[string]interface{} {
 
 // GetAction returns the action affordance with Schema for the action.
 // Returns nil if name is not an action or no affordance is defined.
-func (tdoc *ThingTD) GetAction(name string) *ActionAffordance {
+func (tdoc *ThingTD) GetAction(name string) *grpcthing.ActionAffordance {
 	tdoc.updateMutex.RLock()
 	defer tdoc.updateMutex.RUnlock()
 
@@ -173,7 +100,7 @@ func (tdoc *ThingTD) GetAction(name string) *ActionAffordance {
 }
 
 // GetEvent returns the Schema for the event or nil if the event doesn't exist
-func (tdoc *ThingTD) GetEvent(name string) *EventAffordance {
+func (tdoc *ThingTD) GetEvent(name string) *grpcthing.EventAffordance {
 	tdoc.updateMutex.RLock()
 	defer tdoc.updateMutex.RUnlock()
 
@@ -185,7 +112,7 @@ func (tdoc *ThingTD) GetEvent(name string) *EventAffordance {
 }
 
 // GetProperty returns the Schema and value for the property or nil if name is not a property
-func (tdoc *ThingTD) GetProperty(name string) *PropertyAffordance {
+func (tdoc *ThingTD) GetProperty(name string) *grpcthing.PropertyAffordance {
 	tdoc.updateMutex.RLock()
 	defer tdoc.updateMutex.RUnlock()
 	propAffordance, found := tdoc.Properties[name]
@@ -197,13 +124,13 @@ func (tdoc *ThingTD) GetProperty(name string) *PropertyAffordance {
 
 // GetID returns the ID of the thing TD
 func (tdoc *ThingTD) GetID() string {
-	return tdoc.ID
+	return tdoc.Id
 }
 
 // UpdateAction adds a new or replaces an existing action affordance (Schema) of name. Intended for creating TDs
 // Use UpdateProperty if name is a property name.
 // Returns the added affordance to support chaining
-func (tdoc *ThingTD) UpdateAction(name string, affordance *ActionAffordance) *ActionAffordance {
+func (tdoc *ThingTD) UpdateAction(name string, affordance *grpcthing.ActionAffordance) *grpcthing.ActionAffordance {
 	tdoc.updateMutex.Lock()
 	defer tdoc.updateMutex.Unlock()
 	tdoc.Actions[name] = affordance
@@ -212,7 +139,7 @@ func (tdoc *ThingTD) UpdateAction(name string, affordance *ActionAffordance) *Ac
 
 // UpdateEvent adds a new or replaces an existing event affordance (Schema) of name. Intended for creating TDs
 // Returns the added affordance to support chaining
-func (tdoc *ThingTD) UpdateEvent(name string, affordance *EventAffordance) *EventAffordance {
+func (tdoc *ThingTD) UpdateEvent(name string, affordance *grpcthing.EventAffordance) *grpcthing.EventAffordance {
 	tdoc.updateMutex.Lock()
 	defer tdoc.updateMutex.Unlock()
 	tdoc.Events[name] = affordance
@@ -222,7 +149,7 @@ func (tdoc *ThingTD) UpdateEvent(name string, affordance *EventAffordance) *Even
 // UpdateForms sets the top level forms section of the TD
 // NOTE: In WoST actions are always routed via the Hub using the Hub's protocol binding.
 // Under normal circumstances forms are therefore not needed.
-func (tdoc *ThingTD) UpdateForms(formList []Form) {
+func (tdoc *ThingTD) UpdateForms(formList []*grpcthing.Form) {
 	tdoc.updateMutex.Lock()
 	defer tdoc.updateMutex.Unlock()
 	tdoc.Forms = formList
@@ -230,7 +157,7 @@ func (tdoc *ThingTD) UpdateForms(formList []Form) {
 
 // UpdateProperty adds or replaces a property affordance in the TD. Intended for creating TDs
 // Returns the added affordance to support chaining
-func (tdoc *ThingTD) UpdateProperty(name string, affordance *PropertyAffordance) *PropertyAffordance {
+func (tdoc *ThingTD) UpdateProperty(name string, affordance *grpcthing.PropertyAffordance) *grpcthing.PropertyAffordance {
 	tdoc.updateMutex.Lock()
 	defer tdoc.updateMutex.Unlock()
 	tdoc.Properties[name] = affordance
@@ -280,24 +207,26 @@ func (tdoc *ThingTD) UpdateTitleDescription(title string, description string) {
 // }
 func CreateTD(thingID string, title string, deviceType vocab.DeviceType) *ThingTD {
 	td := ThingTD{
-		AtContext:  []string{"http://www.w3.org/ns/thing"},
-		Actions:    map[string]*ActionAffordance{},
-		Created:    time.Now().Format(vocab.TimeFormat),
-		Events:     map[string]*EventAffordance{},
-		Forms:      nil,
-		ID:         thingID,
-		Modified:   time.Now().Format(vocab.TimeFormat),
-		Properties: map[string]*PropertyAffordance{},
-		// security schemas don't apply to WoST devices, except services exposed by the hub itself
-		Security:    vocab.WoTNoSecurityScheme,
-		Title:       title,
+		ThingDescription: grpcthing.ThingDescription{
+			AtContext:  []string{"http://www.w3.org/ns/thing"},
+			Actions:    map[string]*grpcthing.ActionAffordance{},
+			Created:    time.Now().Format(vocab.TimeFormat),
+			Events:     map[string]*grpcthing.EventAffordance{},
+			Forms:      nil,
+			Id:         thingID,
+			Modified:   time.Now().Format(vocab.TimeFormat),
+			Properties: map[string]*grpcthing.PropertyAffordance{},
+			// security schemas don't apply to WoST devices, except services exposed by the hub itself
+			Security: []string{vocab.WoTNoSecurityScheme},
+			Title:    title,
+		},
 		updateMutex: sync.RWMutex{},
 	}
 
 	// TODO @type is a JSON-LD keyword to label using semantic tags, eg it needs a Schema
 	if deviceType != "" {
 		// deviceType must be a string for serialization and querying
-		td.AtType = string(deviceType)
+		td.AtType = []string{string(deviceType)}
 	}
 	return &td
 }
